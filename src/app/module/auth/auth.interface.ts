@@ -5,7 +5,7 @@ export interface ILoginUserPayload {
     password: string
 }
 
-export interface IRegisterPatientPayload {
+export interface IRegisterCustomerPayload {
     name: string
     email: string
     password: string
