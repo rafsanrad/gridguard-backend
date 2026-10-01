@@ -1,0 +1,30 @@
+model Payment {
+  id                    String  @id @default(uuid())
+  merchantInvoiceNumber String  @unique
+  amount                Decimal @db.Decimal(10, 2)
+  currency              String  @default("BDT")
+
+  provider PaymentProvider @default(BKASH)
+  status   PaymentStatus   @default(PENDING)
+
+  providerPaymentId String?   @unique
+  transactionId     String?   @unique
+  checkoutUrl       String?
+  failureReason     String?
+  paidAt            DateTime?
+
+  customerId String //customer who paid
+  customer   User   @relation(fields: [customerId], references: [id])
+
+  serviceRequestId String //paid for which request
+  serviceRequest   ServiceRequest @relation(fields: [serviceRequestId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([customerId, createdAt])
+  @@index([serviceRequestId])
+  @@index([status])
+  @@index([provider])
+  @@map("payments")
+}

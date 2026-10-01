@@ -1,0 +1,21 @@
+model Area {
+  id          String  @id @default(uuid())
+  name        String
+  code        String  @unique
+  address     String?
+  description String?
+  isActive    Boolean @default(true)
+
+  feederId String
+  feeder   Feeder @relation(fields: [feederId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  customers User[] //one area can have many users / customers
+
+  @@index([feederId])
+  @@index([name])
+  @@index([isActive])
+  @@map("areas")
+}

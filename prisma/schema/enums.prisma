@@ -1,8 +1,7 @@
 enum Role {
-  SUPER_ADMIN
+  CUSTOMER
+  OPERATOR
   ADMIN
-  DOCTOR
-  PATIENT
 }
 
 enum UserStatus {
@@ -15,4 +14,72 @@ enum Gender {
   MALE
   FEMALE
   OTHER
+}
+
+enum ScheduleStatus {
+  SCHEDULED
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum TechnicianStatus {
+  AVAILABLE
+  ASSIGNED
+  ON_LEAVE
+  INACTIVE
+}
+
+enum OutageType {
+  PLANNED
+  UNPLANNED
+}
+
+enum OutageStatus {
+  REPORTED
+  ACKNOWLEDGED
+  ASSIGNED
+  INVESTIGATING
+  REPAIRING
+  RESTORED
+  CLOSED
+}
+
+enum ServiceRequestStatus {
+  PENDING
+  APPROVED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  REJECTED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  CANCELLED
+}
+
+enum PaymentProvider {
+  BKASH
+}
+
+enum NotificationType {
+  LOAD_SHEDDING
+  OUTAGE
+  SERVICE_REQUEST
+  PAYMENT
+  SYSTEM
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+  ASSIGN
+  STATUS_CHANGE
+  PAYMENT
 }

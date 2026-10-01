@@ -1,0 +1,29 @@
+model LoadSheddingSchedule {
+  id          String  @id @default(uuid())
+  title       String
+  description String?
+
+  startDateTime DateTime
+  endDateTime   DateTime
+
+  status ScheduleStatus @default(SCHEDULED)
+
+  reason             String?
+  isNotificationSent Boolean @default(false)
+
+  feederId String
+  feeder   Feeder @relation(fields: [feederId], references: [id])
+
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([feederId])
+  @@index([createdById])
+  @@index([startDateTime])
+  @@index([endDateTime])
+  @@index([status])
+  @@map("load_shedding_schedules")
+}

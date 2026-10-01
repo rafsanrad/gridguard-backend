@@ -1,0 +1,20 @@
+model OutageReport {
+  id          String   @id @default(uuid())
+  description String?
+  location    String?
+  reportedAt  DateTime @default(now())
+
+  customerId String //customer who reported
+  customer   User   @relation(fields: [customerId], references: [id])
+
+  outageId String? //linked official outage id
+  outage   Outage? @relation(fields: [outageId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([customerId])
+  @@index([outageId])
+  @@index([reportedAt])
+  @@map("outage_reports")
+}

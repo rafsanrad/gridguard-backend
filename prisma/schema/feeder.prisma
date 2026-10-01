@@ -1,0 +1,22 @@
+model Feeder {
+  id           String  @id @default(uuid())
+  name         String
+  code         String  @unique
+  voltageLevel String?
+  isActive     Boolean @default(true)
+
+  substationId String
+  substation   Substation @relation(fields: [substationId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  areas     Area[]
+  schedules LoadSheddingSchedule[] //one feeder have many planned load shedding schedules
+  outages   Outage[] //one feeder can have many outage records
+
+  @@index([substationId])
+  @@index([name])
+  @@index([isActive])
+  @@map("feeders")
+}

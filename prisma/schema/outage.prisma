@@ -1,0 +1,36 @@
+model Outage {
+  id          String  @id @default(uuid())
+  title       String
+  description String?
+
+  type   OutageType
+  status OutageStatus @default(REPORTED)
+
+  startedAt           DateTime
+  estimatedRestoredAt DateTime?
+  restoredAt          DateTime?
+
+  cause             String?
+  affectedCustomers Int?
+
+  feederId String
+  feeder   Feeder @relation(fields: [feederId], references: [id])
+
+  reportedById String?
+  reportedBy   User?   @relation("ReportedOutages", fields: [reportedById], references: [id])
+
+  reports     OutageReport[] //customer reports for this outage
+  assignments TechnicianAssignment[] //technicians assigned to fix it
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([feederId])
+  @@index([reportedById])
+  @@index([status])
+  @@index([type])
+  @@index([startedAt])
+  @@index([deletedAt])
+  @@map("outages")
+}

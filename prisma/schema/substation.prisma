@@ -1,0 +1,21 @@
+model Substation {
+  id       String   @id @default(uuid())
+  name     String
+  code     String   @unique
+  address  String?
+  capacity Decimal? @db.Decimal(10, 2)
+  isActive Boolean  @default(true)
+
+  zoneId String
+  zone   Zone   @relation(fields: [zoneId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  feeders Feeder[] //one substation can have maany feaders
+
+  @@index([zoneId])
+  @@index([name])
+  @@index([isActive])
+  @@map("substations")
+}

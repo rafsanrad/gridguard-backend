@@ -1,17 +1,40 @@
 model User {
-  id                 String     @id @default(uuid())
-  name               String
-  email              String
-  password           String
-  emailVerified      Boolean    @default(false)
-  role               Role       @default(PATIENT)
-  status             UserStatus @default(ACTIVE)
-  needPasswordChange Boolean    @default(false)
-  isDeleted          Boolean    @default(false)
-  deletedAt          DateTime?
-  createdAt          DateTime   @default(now())
-  updatedAt          DateTime   @updatedAt
+  id       String  @id @default(uuid())
+  name     String
+  email    String  @unique
+  password String?
+  googleId String? @unique
 
-  @@unique([email])
+  phone        String?
+  profilePhoto String?
+  gender       Gender?
+  role         Role       @default(CUSTOMER)
+  status       UserStatus @default(ACTIVE)
+
+  emailVerified      Boolean @default(false)
+  needPasswordChange Boolean @default(false)
+
+  areaId String?
+  area   Area?   @relation(fields: [areaId], references: [id])
+
+  deletedAt DateTime? //soft delete field
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  createdSchedules       LoadSheddingSchedule[] //for operator
+  reportedOutages        Outage[]               @relation("ReportedOutages")
+  reportedOutageReports  OutageReport[]
+  assignedTechnicianJobs TechnicianAssignment[]
+  serviceRequests        ServiceRequest[]
+  payments               Payment[]
+  notifications          Notification[]
+  auditLogs              AuditLog[]
+  refreshTokens          RefreshToken[]
+
+  @@index([areaId])
+  @@index([role])
+  @@index([status])
+  @@index([deletedAt])
   @@map("users")
 }

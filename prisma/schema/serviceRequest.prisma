@@ -1,0 +1,22 @@
+model ServiceRequest {
+  id          String               @id @default(uuid())
+  title       String
+  description String?
+  status      ServiceRequestStatus @default(PENDING)
+
+  amount Decimal @db.Decimal(10, 2)
+
+  customerId String //who created this request
+  customer   User   @relation(fields: [customerId], references: [id])
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  completedAt DateTime?
+
+  payments Payment[] //payment attempts for this request
+
+  @@index([customerId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("service_requests")
+}

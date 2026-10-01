@@ -1,0 +1,27 @@
+model TechnicianAssignment {
+  id String @id @default(uuid())
+
+  assignedAt  DateTime  @default(now())
+  startedAt   DateTime?
+  completedAt DateTime?
+
+  notes String?
+
+  outageId String //which outage being handled
+  outage   Outage @relation(fields: [outageId], references: [id])
+
+  technicianId String //assinged technician id
+  technician   Technician @relation(fields: [technicianId], references: [id])
+
+  assignedById String // operator/admin who assigned
+  assignedBy   User   @relation(fields: [assignedById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([outageId])
+  @@index([technicianId])
+  @@index([assignedById])
+  @@index([assignedAt])
+  @@map("technician_assignments")
+}

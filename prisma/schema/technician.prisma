@@ -1,0 +1,19 @@
+model Technician {
+  id             String           @id @default(uuid())
+  employeeId     String           @unique
+  name           String
+  phone          String
+  specialization String?
+  status         TechnicianStatus @default(AVAILABLE)
+  isActive       Boolean          @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assignments TechnicianAssignment[] //technician assinged jobs
+
+  @@index([status])
+  @@index([isActive])
+  @@index([name])
+  @@map("technicians")
+}

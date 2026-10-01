@@ -27,7 +27,7 @@ const registerPatient = catchAsync(async (req: Request, res: Response) => {
     sendResponse(res, {
         statusCode: httpStatus.CREATED,
         success: true,
-        message: 'Patient registered successfully',
+        message: 'Customer registered successfully',
         data: {
             accessToken,
             refreshToken,
@@ -58,7 +58,7 @@ const loginUser = catchAsync(async (req: Request, res: Response) => {
     sendResponse(res, {
         statusCode: httpStatus.OK,
         success: true,
-        message: 'User logged in successfully',
+        message: 'Customer logged in successfully',
         data: {
             accessToken,
             refreshToken
@@ -77,7 +77,7 @@ const getMe = catchAsync(async (req: Request, res: Response) => {
     sendResponse(res, {
         statusCode: httpStatus.OK,
         success: true,
-        message: 'User profile fetched successfully',
+        message: 'Customer profile fetched successfully',
         data: result,
     })
 })
