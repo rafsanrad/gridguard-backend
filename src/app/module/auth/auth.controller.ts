@@ -103,6 +103,53 @@ const loginUser = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const googleLogin = catchAsync(
+  async (req: Request, res: Response) => {
+    const result = await AuthService.googleLogin(
+      req.body,
+    );
+
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: "Google login successful",
+      data: result,
+    });
+  },
+);
+
+const googleAuth = catchAsync(
+  async (_req: Request, res: Response) => {
+    const authUrl = AuthService.getGoogleAuthUrl();
+
+    res.redirect(authUrl);
+  },
+);
+
+const googleCallback = catchAsync(
+  async (req: Request, res: Response) => {
+    const code = req.query.code as string;
+
+    if (!code) {
+      throw new AppError(
+        400,
+        "Google authorization code is missing.",
+      );
+    }
+
+    const result = await AuthService.googleCallback(
+      code,
+    );
+
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: "Google login successful",
+      data: result,
+    });
+  },
+);
+
 const forgotPassword = catchAsync(
   async (req: Request, res: Response) => {
     const result = await AuthService.forgotPassword(
@@ -194,6 +241,9 @@ export const AuthController = {
   verifyEmail,
   verifyEmailOtp,
   loginUser,
+  googleLogin,
+  googleAuth,
+  googleCallback,
   forgotPassword,
   resetPassword,
   getMe,

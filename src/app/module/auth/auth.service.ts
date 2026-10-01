@@ -14,6 +14,7 @@ import { AppError } from "../../utils/AppError";
 
 import {
   IForgotPasswordPayload,
+  IGoogleLoginPayload,
   ILoginUserPayload,
   IRegisterCustomerPayload,
   IRequestUser,
@@ -22,6 +23,15 @@ import {
 } from "./auth.interface";
 import { redisClient } from "../../lib/redis";
 import { transporter } from "../../lib/nodemailer";
+import { OAuth2Client } from "google-auth-library";
+
+const googleClient = new OAuth2Client(config.google_client_id);
+
+const googleOAuthClient = new OAuth2Client(
+  config.google_client_id,
+  config.google_client_secret,
+  config.google_redirect_uri,
+);
 
 const registerCustomer = async (payload: IRegisterCustomerPayload) => {
   const { name, password } = payload;
@@ -185,7 +195,6 @@ const verifyEmailOtp = async (payload: IVerifyEmailOtpPayload) => {
     },
   });
 
-  
   const templatePath = path.join(
     process.cwd(),
     "src/app/templates/welcome.ejs",
@@ -266,6 +275,117 @@ const loginUser = async (payload: ILoginUserPayload) => {
     accessToken,
     refreshToken,
   };
+};
+
+const googleLogin = async (payload: IGoogleLoginPayload) => {
+  const ticket = await googleClient.verifyIdToken({
+    idToken: payload.idToken,
+    audience: config.google_client_id,
+  });
+
+  const googlePayload = ticket.getPayload();
+
+  if (!googlePayload || !googlePayload.email || !googlePayload.sub) {
+    throw new AppError(401, "Invalid Google account information.");
+  }
+
+  const email = googlePayload.email.trim().toLowerCase();
+
+  const googleId = googlePayload.sub;
+
+  let user = await prisma.user.findUnique({
+    where: {
+      email,
+    },
+  });
+
+  if (user) {
+    if (user.status === UserStatus.BLOCKED) {
+      throw new AppError(403, "User is blocked.");
+    }
+
+    if (user.deletedAt || user.status === UserStatus.DELETED) {
+      throw new AppError(403, "User is deleted.");
+    }
+
+    if (!user.googleId) {
+      user = await prisma.user.update({
+        where: {
+          id: user.id,
+        },
+        data: {
+          googleId,
+          emailVerified: true,
+        },
+      });
+    }
+  } else {
+    user = await prisma.user.create({
+      data: {
+        name: googlePayload.name || "Google User",
+        email,
+        googleId,
+        profilePhoto: googlePayload.picture,
+        emailVerified: true,
+        role: Role.CUSTOMER,
+        status: UserStatus.ACTIVE,
+      },
+    });
+  }
+
+  const jwtPayload = {
+    userId: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+  };
+
+  const accessToken = jwtUtils.createToken(
+    jwtPayload,
+    config.jwt_access_secret,
+    config.jwt_access_expires_in as SignOptions,
+  );
+
+  const refreshToken = jwtUtils.createToken(
+    jwtPayload,
+    config.jwt_refresh_secret,
+    config.jwt_refresh_expires_in as SignOptions,
+  );
+
+  return {
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      profilePhoto: user.profilePhoto,
+      role: user.role,
+      emailVerified: user.emailVerified,
+    },
+    accessToken,
+    refreshToken,
+  };
+};
+
+const getGoogleAuthUrl = () => {
+  const authUrl = googleOAuthClient.generateAuthUrl({
+    access_type: "offline",
+    scope: ["openid", "email", "profile"],
+    prompt: "select_account",
+  });
+
+  return authUrl;
+};
+
+const googleCallback = async (code: string) => {
+  const { tokens } = await googleOAuthClient.getToken(code);
+
+  if (!tokens.id_token) {
+    throw new AppError(401, "Google ID token was not received.");
+  }
+
+  return googleLogin({
+    idToken: tokens.id_token,
+  });
 };
 
 const forgotPassword = async (payload: IForgotPasswordPayload) => {
@@ -470,6 +590,9 @@ export const AuthService = {
   verifyEmail,
   verifyEmailOtp,
   loginUser,
+  googleLogin,
+  getGoogleAuthUrl,
+  googleCallback,
   forgotPassword,
   resetPassword,
   getMe,

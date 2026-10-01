@@ -34,6 +34,22 @@ router.post(
 );
 
 router.post(
+  "/google-login",
+  validateRequest(AuthValidation.googleLoginSchema),
+  AuthController.googleLogin,
+);
+
+router.get(
+  "/google",
+  AuthController.googleAuth,
+);
+
+router.get(
+  "/google/callback",
+  AuthController.googleCallback,
+);
+
+router.post(
   "/forgot-password",
   validateRequest(AuthValidation.forgotPasswordSchema),
   AuthController.forgotPassword,

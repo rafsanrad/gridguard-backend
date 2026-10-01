@@ -53,11 +53,18 @@ const resetPasswordSchema = z.object({
     .max(100, "Password cannot exceed 100 characters"),
 });
 
+const googleLoginSchema = z.object({
+  idToken: z
+    .string()
+    .min(1, "Google ID token is required"),
+});
+
 export const AuthValidation = {
   registerCustomerSchema,
   verifyEmailSchema,
   verifyEmailOtpSchema,
   loginUserSchema,
   forgotPasswordSchema,
-  resetPasswordSchema
+  resetPasswordSchema,
+  googleLoginSchema
 };
