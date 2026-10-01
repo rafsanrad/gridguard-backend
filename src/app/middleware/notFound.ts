@@ -1,10 +1,19 @@
-import { Request, Response } from "express"
-import httpStatus from "http-status"
+import { Request, Response } from "express";
+import httpStatus from "http-status";
 
-export const notFound = (req: Request, res: Response) => {
-    res.status(httpStatus.NOT_FOUND).json({
-        message: "Route not found",
+export const notFound = (
+  req: Request,
+  res: Response,
+) => {
+  res.status(httpStatus.NOT_FOUND).json({
+    success: false,
+    statusCode: httpStatus.NOT_FOUND,
+    message: "Route not found",
+    errors: [
+      {
         path: req.originalUrl,
-        date: new Date()
-    })
-}
+        message: "The requested route does not exist",
+      },
+    ],
+  });
+};

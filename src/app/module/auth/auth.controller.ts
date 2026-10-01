@@ -65,7 +65,7 @@ const loginUser = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: "Customer logged in successfully",
+    message: "User logged in successfully",
     data: {
       accessToken,
       refreshToken,
@@ -85,7 +85,7 @@ const getMe = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: "Customer profile fetched successfully",
+    message: "User profile fetched successfully",
     data: result,
   });
 });
@@ -99,7 +99,10 @@ const refreshToken = catchAsync(async (req: Request, res: Response) => {
 
   const result = await AuthService.refreshToken(token);
 
-  const { accessToken, refreshToken: newRefreshToken } = result;
+  const {
+    accessToken,
+    refreshToken: newRefreshToken,
+  } = result;
 
   res.cookie("accessToken", accessToken, {
     httpOnly: true,

@@ -2,18 +2,21 @@ import bcrypt from "bcryptjs";
 import { JwtPayload, SignOptions } from "jsonwebtoken";
 
 import { Role, UserStatus } from "../../../generated/prisma/enums";
+
 import config from "../../config";
 import { prisma } from "../../lib/prisma";
 import { jwtUtils } from "../../utils/jwt";
+import { AppError } from "../../utils/AppError";
 
 import {
   ILoginUserPayload,
   IRegisterCustomerPayload,
   IRequestUser,
 } from "./auth.interface";
-import { AppError } from "../../utils/AppError";
 
-const registerCustomer = async (payload: IRegisterCustomerPayload) => {
+const registerCustomer = async (
+  payload: IRegisterCustomerPayload,
+) => {
   const { name, password } = payload;
   const email = payload.email.trim().toLowerCase();
 
@@ -22,7 +25,10 @@ const registerCustomer = async (payload: IRegisterCustomerPayload) => {
   });
 
   if (isUserExists) {
-    throw new AppError(409, "User with this email already exists");
+    throw new AppError(
+      409,
+      "User with this email already exists",
+    );
   }
 
   const hashedPassword = await bcrypt.hash(
@@ -70,7 +76,9 @@ const registerCustomer = async (payload: IRegisterCustomerPayload) => {
   };
 };
 
-const loginUser = async (payload: ILoginUserPayload) => {
+const loginUser = async (
+  payload: ILoginUserPayload,
+) => {
   const { password } = payload;
   const email = payload.email.trim().toLowerCase();
 
@@ -86,7 +94,10 @@ const loginUser = async (payload: ILoginUserPayload) => {
     throw new AppError(403, "User is blocked");
   }
 
-  if (user.deletedAt || user.status === UserStatus.DELETED) {
+  if (
+    user.deletedAt ||
+    user.status === UserStatus.DELETED
+  ) {
     throw new AppError(403, "User is deleted");
   }
 
@@ -97,7 +108,10 @@ const loginUser = async (payload: ILoginUserPayload) => {
     );
   }
 
-  const isPasswordMatched = await bcrypt.compare(password, user.password);
+  const isPasswordMatched = await bcrypt.compare(
+    password,
+    user.password,
+  );
 
   if (!isPasswordMatched) {
     throw new AppError(401, "Invalid credentials");
@@ -142,6 +156,17 @@ const getMe = async (user: IRequestUser) => {
     throw new AppError(404, "User not found");
   }
 
+  if (existingUser.status === UserStatus.BLOCKED) {
+    throw new AppError(403, "User is blocked");
+  }
+
+  if (
+    existingUser.deletedAt ||
+    existingUser.status === UserStatus.DELETED
+  ) {
+    throw new AppError(403, "User is deleted");
+  }
+
   return existingUser;
 };
 
@@ -151,7 +176,10 @@ const refreshToken = async (token: string) => {
     config.jwt_refresh_secret,
   );
 
-  if (!verifiedRefreshToken.success || !verifiedRefreshToken.data) {
+  if (
+    !verifiedRefreshToken.success ||
+    !verifiedRefreshToken.data
+  ) {
     throw new AppError(401, "Invalid refresh token");
   }
 
@@ -163,8 +191,15 @@ const refreshToken = async (token: string) => {
     },
   });
 
-  if (!user || user.deletedAt || user.status !== UserStatus.ACTIVE) {
-    throw new AppError(401, "User is inactive or not found");
+  if (
+    !user ||
+    user.deletedAt ||
+    user.status !== UserStatus.ACTIVE
+  ) {
+    throw new AppError(
+      401,
+      "User is inactive or not found",
+    );
   }
 
   const jwtPayload = {
