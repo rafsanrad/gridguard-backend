@@ -23,7 +23,9 @@
         "express": "^5.2.1",
         "http-status": "^2.1.0",
         "jsonwebtoken": "^9.0.3",
+        "nodemailer": "^10.0.13",
         "pg": "^8.22.0",
+        "redis": "^6.3.0",
         "zod": "^4.6.5"
     },
     "devDependencies": {
@@ -32,6 +34,7 @@
         "@types/express": "^5.0.6",
         "@types/jsonwebtoken": "^9.0.10",
         "@types/node": "^26.1.2",
+        "@types/nodemailer": "^8.0.2",
         "@types/pg": "^8.20.0",
         "prisma": "^7.9.1",
         "tsx": "^4.23.1",
