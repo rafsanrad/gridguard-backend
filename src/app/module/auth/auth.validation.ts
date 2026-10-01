@@ -35,9 +35,29 @@ const verifyEmailOtpSchema = z.object({
     .regex(/^\d+$/, "OTP must contain only numbers"),
 });
 
+const forgotPasswordSchema = z.object({
+  email: z.email("Please provide a valid email address"),
+});
+
+const resetPasswordSchema = z.object({
+  email: z.email("Please provide a valid email address"),
+
+  otp: z
+    .string()
+    .length(6, "OTP must be exactly 6 digits")
+    .regex(/^\d+$/, "OTP must contain only numbers"),
+
+  newPassword: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .max(100, "Password cannot exceed 100 characters"),
+});
+
 export const AuthValidation = {
   registerCustomerSchema,
   verifyEmailSchema,
   verifyEmailOtpSchema,
   loginUserSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema
 };

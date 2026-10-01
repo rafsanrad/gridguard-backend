@@ -13,9 +13,11 @@ import { jwtUtils } from "../../utils/jwt";
 import { AppError } from "../../utils/AppError";
 
 import {
+  IForgotPasswordPayload,
   ILoginUserPayload,
   IRegisterCustomerPayload,
   IRequestUser,
+  IResetPasswordPayload,
   IVerifyEmailOtpPayload,
 } from "./auth.interface";
 import { redisClient } from "../../lib/redis";
@@ -88,39 +90,22 @@ const verifyEmail = async (email: string) => {
   });
 
   if (!user) {
-    throw new AppError(
-      404,
-      "User does not exist.",
-    );
+    throw new AppError(404, "User does not exist.");
   }
 
   if (user.status === UserStatus.BLOCKED) {
-    throw new AppError(
-      403,
-      "User is blocked.",
-    );
+    throw new AppError(403, "User is blocked.");
   }
 
-  if (
-    user.deletedAt ||
-    user.status === UserStatus.DELETED
-  ) {
-    throw new AppError(
-      403,
-      "User is deleted.",
-    );
+  if (user.deletedAt || user.status === UserStatus.DELETED) {
+    throw new AppError(403, "User is deleted.");
   }
 
   if (user.emailVerified) {
-    throw new AppError(
-      400,
-      "Email is already verified.",
-    );
+    throw new AppError(400, "Email is already verified.");
   }
 
-  const otp = crypto
-    .randomInt(100000, 1000000)
-    .toString();
+  const otp = crypto.randomInt(100000, 1000000).toString();
 
   const key = `gridguard:email-verification:otp:${user.email}`;
 
@@ -141,10 +126,7 @@ const verifyEmail = async (email: string) => {
     expirationMinutes: expirationSeconds / 60,
   };
 
-  const html = await ejs.renderFile(
-    templatePath,
-    templateData,
-  );
+  const html = await ejs.renderFile(templatePath, templateData);
 
   await transporter.sendMail({
     from: config.email_sender,
@@ -159,9 +141,7 @@ const verifyEmail = async (email: string) => {
   };
 };
 
-const verifyEmailOtp = async (
-  payload: IVerifyEmailOtpPayload,
-) => {
+const verifyEmailOtp = async (payload: IVerifyEmailOtpPayload) => {
   const email = payload.email.trim().toLowerCase();
 
   const user = await prisma.user.findUnique({
@@ -171,34 +151,19 @@ const verifyEmailOtp = async (
   });
 
   if (!user) {
-    throw new AppError(
-      404,
-      "User does not exist.",
-    );
+    throw new AppError(404, "User does not exist.");
   }
 
   if (user.status === UserStatus.BLOCKED) {
-    throw new AppError(
-      403,
-      "User is blocked.",
-    );
+    throw new AppError(403, "User is blocked.");
   }
 
-  if (
-    user.deletedAt ||
-    user.status === UserStatus.DELETED
-  ) {
-    throw new AppError(
-      403,
-      "User is deleted.",
-    );
+  if (user.deletedAt || user.status === UserStatus.DELETED) {
+    throw new AppError(403, "User is deleted.");
   }
 
   if (user.emailVerified) {
-    throw new AppError(
-      400,
-      "Email is already verified.",
-    );
+    throw new AppError(400, "Email is already verified.");
   }
 
   const key = `gridguard:email-verification:otp:${user.email}`;
@@ -206,26 +171,35 @@ const verifyEmailOtp = async (
   const storedOtp = await redisClient.get(key);
 
   if (!storedOtp) {
-    throw new AppError(
-      400,
-      "OTP has expired or does not exist.",
-    );
+    throw new AppError(400, "OTP has expired or does not exist.");
   }
 
   if (storedOtp !== payload.otp) {
-    throw new AppError(
-      400,
-      "Invalid OTP.",
-    );
+    throw new AppError(400, "Invalid OTP.");
   }
 
   await prisma.user.update({
-    where: {
-      id: user.id,
-    },
+    where: { id: user.id },
     data: {
       emailVerified: true,
     },
+  });
+
+  
+  const templatePath = path.join(
+    process.cwd(),
+    "src/app/templates/welcome.ejs",
+  );
+
+  const html = await ejs.renderFile(templatePath, {
+    name: user.name,
+  });
+
+  const emailResult = await transporter.sendMail({
+    from: config.email_sender,
+    to: user.email,
+    subject: "Welcome to GridGuard!",
+    html,
   });
 
   await redisClient.del(key);
@@ -291,6 +265,131 @@ const loginUser = async (payload: ILoginUserPayload) => {
   return {
     accessToken,
     refreshToken,
+  };
+};
+
+const forgotPassword = async (payload: IForgotPasswordPayload) => {
+  const email = payload.email.trim().toLowerCase();
+
+  const user = await prisma.user.findUnique({
+    where: {
+      email,
+    },
+  });
+
+  if (!user) {
+    throw new AppError(404, "User does not exist.");
+  }
+
+  if (user.status === UserStatus.BLOCKED) {
+    throw new AppError(403, "User is blocked.");
+  }
+
+  if (user.deletedAt || user.status === UserStatus.DELETED) {
+    throw new AppError(403, "User is deleted.");
+  }
+
+  if (!user.emailVerified) {
+    throw new AppError(403, "Please verify your email first.");
+  }
+
+  if (user.googleId && !user.password) {
+    throw new AppError(400, "This account uses Google login.");
+  }
+
+  const otp = crypto.randomInt(100000, 1000000).toString();
+
+  const key = `gridguard:forgot-password:otp:${user.email}`;
+
+  const expirationSeconds = 5 * 60;
+
+  await redisClient.set(key, otp, {
+    EX: expirationSeconds,
+  });
+
+  const templatePath = path.join(
+    process.cwd(),
+    "src/app/templates/forgot-password.ejs",
+  );
+
+  const templateData = {
+    name: user.name,
+    otp,
+    expirationMinutes: expirationSeconds / 60,
+  };
+
+  const html = await ejs.renderFile(templatePath, templateData);
+
+  await transporter.sendMail({
+    from: config.email_sender,
+    to: user.email,
+    subject: "GridGuard - Password Reset OTP",
+    html,
+  });
+
+  return {
+    email: user.email,
+    message: "Password reset OTP sent to your email.",
+  };
+};
+
+const resetPassword = async (payload: IResetPasswordPayload) => {
+  const email = payload.email.trim().toLowerCase();
+
+  const user = await prisma.user.findUnique({
+    where: {
+      email,
+    },
+  });
+
+  if (!user) {
+    throw new AppError(404, "User does not exist.");
+  }
+
+  if (user.status === UserStatus.BLOCKED) {
+    throw new AppError(403, "User is blocked.");
+  }
+
+  if (user.deletedAt || user.status === UserStatus.DELETED) {
+    throw new AppError(403, "User is deleted.");
+  }
+
+  if (!user.emailVerified) {
+    throw new AppError(403, "Please verify your email first.");
+  }
+
+  const key = `gridguard:forgot-password:otp:${user.email}`;
+
+  const storedOtp = await redisClient.get(key);
+
+  if (!storedOtp) {
+    throw new AppError(400, "OTP has expired or does not exist.");
+  }
+
+  if (storedOtp !== payload.otp) {
+    throw new AppError(400, "Invalid OTP.");
+  }
+
+  const hashedPassword = await bcrypt.hash(
+    payload.newPassword,
+    Number(config.bcrypt_salt_rounds) || 10,
+  );
+
+  await prisma.user.update({
+    where: {
+      id: user.id,
+    },
+    data: {
+      password: hashedPassword,
+      needPasswordChange: false,
+    },
+  });
+
+  await redisClient.del(key);
+
+  return {
+    email: user.email,
+    message: "Password reset successfully.",
   };
 };
 
@@ -371,6 +470,8 @@ export const AuthService = {
   verifyEmail,
   verifyEmailOtp,
   loginUser,
+  forgotPassword,
+  resetPassword,
   getMe,
   refreshToken,
 };

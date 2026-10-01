@@ -103,6 +103,36 @@ const loginUser = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const forgotPassword = catchAsync(
+  async (req: Request, res: Response) => {
+    const result = await AuthService.forgotPassword(
+      req.body,
+    );
+
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: "Password reset OTP sent successfully",
+      data: result,
+    });
+  },
+);
+
+const resetPassword = catchAsync(
+  async (req: Request, res: Response) => {
+    const result = await AuthService.resetPassword(
+      req.body,
+    );
+
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: "Password reset successfully",
+      data: result,
+    });
+  },
+);
+
 const getMe = catchAsync(async (req: Request, res: Response) => {
   const user = req.user as IRequestUser;
 
@@ -164,6 +194,8 @@ export const AuthController = {
   verifyEmail,
   verifyEmailOtp,
   loginUser,
+  forgotPassword,
+  resetPassword,
   getMe,
   refreshToken,
 };
