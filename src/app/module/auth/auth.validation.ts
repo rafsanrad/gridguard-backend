@@ -6,9 +6,7 @@ const registerCustomerSchema = z.object({
     .min(2, "Name must be at least 2 characters")
     .max(100, "Name cannot exceed 100 characters"),
 
-  email: z
-    .string()
-    .email("Please provide a valid email address"),
+  email: z.email("Please provide a valid email address"),
 
   password: z
     .string()
@@ -17,16 +15,29 @@ const registerCustomerSchema = z.object({
 });
 
 const loginUserSchema = z.object({
-  email: z
-    .string()
-    .email("Please provide a valid email address"),
+  email: z.email("Please provide a valid email address"),
 
   password: z
     .string()
     .min(1, "Password is required"),
 });
 
+const verifyEmailSchema = z.object({
+  email: z.email("Please provide a valid email address"),
+});
+
+const verifyEmailOtpSchema = z.object({
+  email: z.email("Please provide a valid email address"),
+
+  otp: z
+    .string()
+    .length(6, "OTP must be exactly 6 digits")
+    .regex(/^\d+$/, "OTP must contain only numbers"),
+});
+
 export const AuthValidation = {
   registerCustomerSchema,
+  verifyEmailSchema,
+  verifyEmailOtpSchema,
   loginUserSchema,
 };

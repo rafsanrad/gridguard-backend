@@ -16,6 +16,18 @@ router.post(
 );
 
 router.post(
+  "/verify-email",
+  validateRequest(AuthValidation.verifyEmailSchema),
+  AuthController.verifyEmail,
+);
+
+router.post(
+  "/verify-email-otp",
+  validateRequest(AuthValidation.verifyEmailOtpSchema),
+  AuthController.verifyEmailOtp,
+);
+
+router.post(
   "/login",
   validateRequest(AuthValidation.loginUserSchema),
   AuthController.loginUser,

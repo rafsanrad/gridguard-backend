@@ -41,6 +41,36 @@ const registerCustomer = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const verifyEmail = catchAsync(
+  async (req: Request, res: Response) => {
+    const { email } = req.body;
+
+    const result = await AuthService.verifyEmail(email);
+
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: "Verification OTP sent successfully",
+      data: result,
+    });
+  },
+);
+
+const verifyEmailOtp = catchAsync(
+  async (req: Request, res: Response) => {
+    const result = await AuthService.verifyEmailOtp(
+      req.body,
+    );
+
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: "Email verified successfully",
+      data: result,
+    });
+  },
+);
+
 const loginUser = catchAsync(async (req: Request, res: Response) => {
   const payload = req.body;
 
@@ -131,6 +161,8 @@ const refreshToken = catchAsync(async (req: Request, res: Response) => {
 
 export const AuthController = {
   registerCustomer,
+  verifyEmail,
+  verifyEmailOtp,
   loginUser,
   getMe,
   refreshToken,

@@ -11,6 +11,11 @@ export interface IRegisterCustomerPayload {
     password: string
 }
 
+export interface IVerifyEmailOtpPayload {
+  email: string;
+  otp: string;
+}
+
 export interface IRequestUser {
     userId: string
     email: string
