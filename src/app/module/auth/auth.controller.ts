@@ -1,122 +1,134 @@
-import { Request, Response } from 'express'
-import httpStatus from 'http-status'
-import { catchAsync } from '../../utils/catchAsync'
-import { sendResponse } from '../../utils/sendResponse'
-import { IRequestUser } from './auth.interface'
-import { AuthService } from './auth.service'
+import { Request, Response } from "express";
+import httpStatus from "http-status";
 
-const registerPatient = catchAsync(async (req: Request, res: Response) => {
-    const payload = req.body
-    const result = await AuthService.registerPatient(payload)
+import { catchAsync } from "../../utils/catchAsync";
+import { sendResponse } from "../../utils/sendResponse";
+import { AppError } from "../../utils/AppError";
 
-    const { accessToken, refreshToken, user, patient } = result
+import { IRequestUser } from "./auth.interface";
+import { AuthService } from "./auth.service";
 
-    res.cookie("accessToken", accessToken, {
-        httpOnly: true,
-        secure: false,
-        sameSite: "none",
-        maxAge: 1000 * 60 * 60 * 24 // 24 hour or 1 day
-    })
-    res.cookie("refreshToken", refreshToken, {
-        httpOnly: true,
-        secure: false,
-        sameSite: "none",
-        maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
-    })
+const registerCustomer = catchAsync(async (req: Request, res: Response) => {
+  const payload = req.body;
 
-    sendResponse(res, {
-        statusCode: httpStatus.CREATED,
-        success: true,
-        message: 'Customer registered successfully',
-        data: {
-            accessToken,
-            refreshToken,
-            user,
-            patient,
-        },
-    })
-})
+  const result = await AuthService.registerCustomer(payload);
+
+  const { accessToken, refreshToken, user } = result;
+
+  res.cookie("accessToken", accessToken, {
+    httpOnly: true,
+    secure: false,
+    sameSite: "lax",
+    maxAge: 1000 * 60 * 60 * 24,
+  });
+
+  res.cookie("refreshToken", refreshToken, {
+    httpOnly: true,
+    secure: false,
+    sameSite: "lax",
+    maxAge: 1000 * 60 * 60 * 24 * 7,
+  });
+
+  sendResponse(res, {
+    statusCode: httpStatus.CREATED,
+    success: true,
+    message: "Customer registered successfully",
+    data: {
+      user,
+      accessToken,
+      refreshToken,
+    },
+  });
+});
 
 const loginUser = catchAsync(async (req: Request, res: Response) => {
-    const payload = req.body
-    const result = await AuthService.loginUser(payload)
-    const { accessToken, refreshToken } = result
+  const payload = req.body;
 
-    res.cookie("accessToken", accessToken, {
-        httpOnly: true,
-        secure: false,
-        sameSite: "none",
-        maxAge: 1000 * 60 * 60 * 24 // 24 hour or 1 day
-    })
-    res.cookie("refreshToken", refreshToken, {
-        httpOnly: true,
-        secure: false,
-        sameSite: "none",
-        maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
-    })
+  const result = await AuthService.loginUser(payload);
 
-    sendResponse(res, {
-        statusCode: httpStatus.OK,
-        success: true,
-        message: 'Customer logged in successfully',
-        data: {
-            accessToken,
-            refreshToken
-        },
-    })
-})
+  const { accessToken, refreshToken } = result;
+
+  res.cookie("accessToken", accessToken, {
+    httpOnly: true,
+    secure: false,
+    sameSite: "lax",
+    maxAge: 1000 * 60 * 60 * 24,
+  });
+
+  res.cookie("refreshToken", refreshToken, {
+    httpOnly: true,
+    secure: false,
+    sameSite: "lax",
+    maxAge: 1000 * 60 * 60 * 24 * 7,
+  });
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Customer logged in successfully",
+    data: {
+      accessToken,
+      refreshToken,
+    },
+  });
+});
 
 const getMe = catchAsync(async (req: Request, res: Response) => {
-    const user = req.user as unknown as IRequestUser
+  const user = req.user as IRequestUser;
 
-    if (!user) {
-        throw new Error('User information is missing in the request')
-    }
+  if (!user) {
+    throw new AppError(401, "User information is missing");
+  }
 
-    const result = await AuthService.getMe(user)
-    sendResponse(res, {
-        statusCode: httpStatus.OK,
-        success: true,
-        message: 'Customer profile fetched successfully',
-        data: result,
-    })
-})
+  const result = await AuthService.getMe(user);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Customer profile fetched successfully",
+    data: result,
+  });
+});
 
 const refreshToken = catchAsync(async (req: Request, res: Response) => {
-    if (!req.cookies.refreshToken) {
-        throw new Error('Refresh token is missing')
-    }
-    const result = await AuthService.refreshToken(req.cookies.refreshToken)
-    const { accessToken, refreshToken: newRefreshToken } = result
+  const token = req.cookies.refreshToken;
 
-    res.cookie("accessToken", accessToken, {
-        httpOnly: true,
-        secure: false,
-        sameSite: "none",
-        maxAge: 1000 * 60 * 60 * 24 // 24 hour or 1 day
-    })
-    res.cookie("refreshToken", newRefreshToken, {
-        httpOnly: true,
-        secure: false,
-        sameSite: "none",
-        maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
-    })
+  if (!token) {
+    throw new AppError(401, "Refresh token is missing");
+  }
 
-    sendResponse(res, {
-        statusCode: httpStatus.OK,
-        success: true,
-        message: 'New tokens generated successfully',
-        data: {
-            accessToken,
-            refreshToken: newRefreshToken,
-        },
-    })
-})
+  const result = await AuthService.refreshToken(token);
 
+  const { accessToken, refreshToken: newRefreshToken } = result;
+
+  res.cookie("accessToken", accessToken, {
+    httpOnly: true,
+    secure: false,
+    sameSite: "lax",
+    maxAge: 1000 * 60 * 60 * 24,
+  });
+
+  res.cookie("refreshToken", newRefreshToken, {
+    httpOnly: true,
+    secure: false,
+    sameSite: "lax",
+    maxAge: 1000 * 60 * 60 * 24 * 7,
+  });
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "New tokens generated successfully",
+    data: {
+      accessToken,
+      refreshToken: newRefreshToken,
+    },
+  });
+});
 
 export const AuthController = {
-    registerPatient,
-    loginUser,
-    getMe,
-    refreshToken,
-}
+  registerCustomer,
+  loginUser,
+  getMe,
+  refreshToken,
+};

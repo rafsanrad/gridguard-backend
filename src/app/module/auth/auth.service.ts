@@ -86,7 +86,7 @@ const loginUser = async (payload: ILoginUserPayload) => {
     throw new AppError(403, "User is blocked");
   }
 
-  if (user.isDeleted || user.status === UserStatus.DELETED) {
+  if (user.deletedAt || user.status === UserStatus.DELETED) {
     throw new AppError(403, "User is deleted");
   }
 
@@ -163,11 +163,7 @@ const refreshToken = async (token: string) => {
     },
   });
 
-  if (
-    !user ||
-    user.isDeleted ||
-    user.status !== UserStatus.ACTIVE
-  ) {
+  if (!user || user.deletedAt || user.status !== UserStatus.ACTIVE) {
     throw new AppError(401, "User is inactive or not found");
   }
 
