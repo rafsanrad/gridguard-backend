@@ -14,16 +14,18 @@ export default {
   jwt_refresh_secret: process.env.JWT_REFRESH_SECRET!,
   jwt_access_expires_in: process.env.JWT_ACCESS_EXPIRES_IN!,
   jwt_refresh_expires_in: process.env.JWT_REFRESH_EXPIRES_IN!,
+
   google_client_id: process.env.GOOGLE_CLIENT_ID!,
   google_client_secret: process.env.GOOGLE_CLIENT_SECRET!,
   google_redirect_uri: process.env.GOOGLE_REDIRECT_URI!,
 
-  tester_admin_name: process.env.TESTER_ADMIN_NAME!,
-  tester_admin_email: process.env.TESTER_ADMIN_EMAIL!,
-  tester_admin_password: process.env.TESTER_ADMIN_PASSWORD!,
-  tester_doctor_name: process.env.TESTER_DOCTOR_NAME!,
-  tester_doctor_email: process.env.TESTER_DOCTOR_EMAIL!,
-  tester_doctor_password: process.env.TESTER_DOCTOR_PASSWORD!,
+  admin_name: process.env.ADMIN_NAME!,
+  admin_email: process.env.ADMIN_EMAIL!,
+  admin_password: process.env.ADMIN_PASSWORD!,
+  operator_name: process.env.OPERATOR_NAME!,
+  operator_email: process.env.OPERATOR_EMAIL!,
+  operator_password: process.env.OPERATOR_PASSWORD!,
+
   redis_user: process.env.REDIS_USER!,
   redis_password: process.env.REDIS_PASSWORD!,
   redis_host: process.env.REDIS_HOST!,
@@ -31,9 +33,11 @@ export default {
   smtp_user: process.env.SMTP_USER!,
   smtp_password: process.env.SMTP_PASSWORD!,
   email_sender: process.env.EMAIL_SENDER!,
+  
   cloudinary_cloud_name: process.env.CLOUDINARY_CLOUD_NAME!,
   cloudinary_api_key: process.env.CLOUDINARY_API_KEY!,
   cloudinary_api_secret: process.env.CLOUDINARY_API_SECRET!,
+
   bkash_base_url: process.env.BKASH_BASE_URL!,
   bkash_username: process.env.BKASH_USERNAME!,
   bkash_password: process.env.BKASH_PASSWORD!,

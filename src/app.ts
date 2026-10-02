@@ -14,6 +14,7 @@ import { TechnicianRoutes } from './app/module/technician/technician.route'
 import { LoadSheddingRoutes } from './app/module/loadShedding/loadShedding.route'
 import { OutageRoutes } from './app/module/outage/outage.route'
 import { OutageReportRoutes } from './app/module/outageReport/outageReport.route'
+import { TechnicianAssignmentRoutes } from './app/module/technicianAssignment/technicianAssignment.route'
 
 const app: Application = express()
 
@@ -40,6 +41,7 @@ app.use('/api/v1/technicians', TechnicianRoutes)
 app.use('/api/v1/load-shedding', LoadSheddingRoutes)
 app.use('/api/v1/outages', OutageRoutes)
 app.use('/api/v1/outage-reports', OutageReportRoutes)
+app.use('/api/v1/technician-assignments', TechnicianAssignmentRoutes)
 
 // Basic route
 app.get('/', async (req: Request, res: Response) => {
