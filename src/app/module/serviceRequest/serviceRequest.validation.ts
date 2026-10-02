@@ -12,8 +12,6 @@ const createServiceRequestSchema = z.object({
     .optional(),
 
   amount: z.number().positive("Amount must be greater than 0"),
-
-  customerId: z.string().min(1, "Customer ID is required"),
 });
 
 const updateServiceRequestSchema = z.object({

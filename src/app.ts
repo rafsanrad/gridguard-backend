@@ -18,6 +18,7 @@ import { TechnicianAssignmentRoutes } from "./app/module/technicianAssignment/te
 import { NotificationRoutes } from "./app/module/notification/notification.route";
 import { ServiceRequestRoutes } from "./app/module/serviceRequest/serviceRequest.route";
 import { PaymentRoutes } from "./app/module/payment/payment.route";
+import { AuditLogRoutes } from "./app/module/auditLog/auditLog.route";
 
 const app: Application = express();
 
@@ -48,6 +49,7 @@ app.use("/api/v1/technician-assignments", TechnicianAssignmentRoutes);
 app.use("/api/v1/notifications", NotificationRoutes);
 app.use("/api/v1/service-requests", ServiceRequestRoutes);
 app.use("/api/v1/payments", PaymentRoutes);
+app.use("/api/v1/audit-logs", AuditLogRoutes);
 
 // Basic route
 app.get("/", async (req: Request, res: Response) => {

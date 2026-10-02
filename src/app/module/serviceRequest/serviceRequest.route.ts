@@ -1,5 +1,9 @@
 import { Router } from "express";
+
+import { Role } from "../../../generated/prisma/enums";
+import { auth } from "../../middleware/checkAuth";
 import { validateRequest } from "../../middleware/validateRequest";
+
 import { ServiceRequestController } from "./serviceRequest.controller";
 import { ServiceRequestValidation } from "./serviceRequest.validation";
 
@@ -7,16 +11,26 @@ const router = Router();
 
 router.post(
   "/",
+  auth(Role.CUSTOMER),
   validateRequest(ServiceRequestValidation.createServiceRequestSchema),
   ServiceRequestController.createServiceRequest,
 );
 
-router.get("/", ServiceRequestController.getAllServiceRequests);
+router.get(
+  "/",
+  auth(Role.ADMIN, Role.OPERATOR),
+  ServiceRequestController.getAllServiceRequests,
+);
 
-router.get("/:id", ServiceRequestController.getSingleServiceRequest);
+router.get(
+  "/:id",
+  auth(Role.ADMIN, Role.OPERATOR, Role.CUSTOMER),
+  ServiceRequestController.getSingleServiceRequest,
+);
 
 router.patch(
   "/:id",
+  auth(Role.ADMIN, Role.OPERATOR),
   validateRequest(ServiceRequestValidation.updateServiceRequestSchema),
   ServiceRequestController.updateServiceRequest,
 );

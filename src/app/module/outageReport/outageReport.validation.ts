@@ -11,10 +11,6 @@ const createOutageReportSchema = z.object({
     .max(255, "Location cannot exceed 255 characters")
     .optional(),
 
-  customerId: z
-    .string()
-    .min(1, "Customer ID is required"),
-
   outageId: z
     .string()
     .optional(),

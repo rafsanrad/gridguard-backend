@@ -5,7 +5,7 @@ import { sendResponse } from "../../utils/sendResponse";
 import { ServiceRequestService } from "./serviceRequest.service";
 
 const createServiceRequest = catchAsync(async (req: Request, res: Response) => {
-  const result = await ServiceRequestService.createServiceRequest(req.body);
+  const result = await ServiceRequestService.createServiceRequest(req.body,req.user?.userId as string);
 
   sendResponse(res, {
     statusCode: httpStatus.CREATED,
@@ -30,14 +30,17 @@ const getAllServiceRequests = catchAsync(
 
 const getSingleServiceRequest = catchAsync(
   async (req: Request, res: Response) => {
-    const result = await ServiceRequestService.getSingleServiceRequest(
-      req.params.id as string,
-    );
+    const result =
+      await ServiceRequestService.getSingleServiceRequest(
+        req.params.id as string,
+        req.user?.userId,
+        req.user?.role,
+      );
 
     sendResponse(res, {
       statusCode: httpStatus.OK,
       success: true,
-      message: "Service request fetched successfully",
+      message: "Service request retrieved successfully",
       data: result,
     });
   },

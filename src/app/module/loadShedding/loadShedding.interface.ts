@@ -5,7 +5,6 @@ export interface ICreateLoadSheddingPayload {
   endDateTime: Date;
   reason?: string;
   feederId: string;
-  createdById: string;
 }
 
 export interface IUpdateLoadSheddingPayload {

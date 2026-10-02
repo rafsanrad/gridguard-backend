@@ -5,7 +5,10 @@ import {
   IUpdateLoadSheddingPayload,
 } from "./loadShedding.interface";
 
-const createLoadShedding = async (payload: ICreateLoadSheddingPayload) => {
+const createLoadShedding = async (
+  payload: ICreateLoadSheddingPayload,
+  createdById: string,
+) => {
   const feeder = await prisma.feeder.findUnique({
     where: {
       id: payload.feederId,
@@ -22,7 +25,7 @@ const createLoadShedding = async (payload: ICreateLoadSheddingPayload) => {
 
   const creator = await prisma.user.findUnique({
     where: {
-      id: payload.createdById,
+      id: createdById,
     },
   });
 
@@ -62,7 +65,7 @@ const createLoadShedding = async (payload: ICreateLoadSheddingPayload) => {
       endDateTime: payload.endDateTime,
       reason: payload.reason,
       feederId: payload.feederId,
-      createdById: payload.createdById,
+      createdById,
     },
   });
 

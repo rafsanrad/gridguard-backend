@@ -7,7 +7,10 @@ import {
 } from "./outage.interface";
 import { OutageStatus } from "../../../generated/prisma/enums";
 
-const createOutage = async (payload: ICreateOutagePayload) => {
+const createOutage = async (
+  payload: ICreateOutagePayload,
+  reportedById: string,
+) => {
   const feeder = await prisma.feeder.findUnique({
     where: {
       id: payload.feederId,
@@ -22,10 +25,10 @@ const createOutage = async (payload: ICreateOutagePayload) => {
     throw new AppError(400, "Cannot create outage for an inactive feeder");
   }
 
-  if (payload.reportedById) {
+  if (reportedById) {
     const reporter = await prisma.user.findUnique({
       where: {
-        id: payload.reportedById,
+        id: reportedById,
       },
     });
 
@@ -44,7 +47,7 @@ const createOutage = async (payload: ICreateOutagePayload) => {
       cause: payload.cause,
       affectedCustomers: payload.affectedCustomers,
       feederId: payload.feederId,
-      reportedById: payload.reportedById,
+      reportedById,
     },
   });
 
@@ -141,11 +144,11 @@ const updateOutage = async (id: string, payload: IUpdateOutagePayload) => {
 const updateOutageStatus = async (
   id: string,
   payload: IUpdateOutageStatusPayload,
+  actorId: string,
 ) => {
-  const outage = await prisma.outage.findFirst({
+  const outage = await prisma.outage.findUnique({
     where: {
       id,
-      deletedAt: null,
     },
   });
 
@@ -153,46 +156,60 @@ const updateOutageStatus = async (
     throw new AppError(404, "Outage not found");
   }
 
-  //Transitions serial can not break.
   const allowedTransitions: Record<OutageStatus, OutageStatus[]> = {
-    REPORTED: [OutageStatus.ACKNOWLEDGED],
-    ACKNOWLEDGED: [OutageStatus.ASSIGNED],
-    ASSIGNED: [OutageStatus.INVESTIGATING],
-    INVESTIGATING: [OutageStatus.REPAIRING],
-    REPAIRING: [OutageStatus.RESTORED],
-    RESTORED: [OutageStatus.CLOSED],
+    REPORTED: ["ACKNOWLEDGED"],
+    ACKNOWLEDGED: ["ASSIGNED"],
+    ASSIGNED: ["INVESTIGATING"],
+    INVESTIGATING: ["REPAIRING"],
+    REPAIRING: ["RESTORED"],
+    RESTORED: ["CLOSED"],
     CLOSED: [],
   };
 
-  const allowedNextStatuses = allowedTransitions[outage.status];
+  const nextStatuses = allowedTransitions[outage.status];
 
-  if (!allowedNextStatuses.includes(payload.status)) {
+  if (!nextStatuses.includes(payload.status)) {
     throw new AppError(
       400,
-      `Invalid outage status transition from ${outage.status} to ${payload.status}`,
+      `Invalid status transition from ${outage.status} to ${payload.status}`,
     );
   }
 
-  const updateData: {
-    status: OutageStatus;
-    restoredAt?: Date;
-  } = {
-    status: payload.status,
-  };
+  const result = await prisma.$transaction(async (tx) => {
+    const updatedOutage = await tx.outage.update({
+      where: {
+        id,
+      },
+      data: {
+        status: payload.status,
 
-  if (payload.status === OutageStatus.RESTORED) {
-    updateData.restoredAt = new Date();
-  }
+        restoredAt:
+          payload.status === "RESTORED" ? new Date() : outage.restoredAt,
+      },
+    });
 
-  const updatedOutage = await prisma.outage.update({
-    where: {
-      id,
-    },
+    await tx.auditLog.create({
+      data: {
+        action: "STATUS_CHANGE",
+        entity: "Outage",
+        entityId: outage.id,
 
-    data: updateData,
+        oldValues: {
+          status: outage.status,
+        },
+
+        newValues: {
+          status: payload.status,
+          notes: payload.notes,
+        },
+        actorId
+      },
+    });
+
+    return updatedOutage;
   });
 
-  return updatedOutage;
+  return result;
 };
 
 const deleteOutage = async (id: string) => {

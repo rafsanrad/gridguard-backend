@@ -8,6 +8,7 @@ const createTechnicianAssignment = catchAsync(
   async (req: Request, res: Response) => {
     const result = await TechnicianAssignmentService.createTechnicianAssignment(
       req.body,
+      req.user?.userId as string,
     );
 
     sendResponse(res, {

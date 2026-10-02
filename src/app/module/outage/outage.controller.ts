@@ -5,7 +5,10 @@ import { sendResponse } from "../../utils/sendResponse";
 import { OutageService } from "./outage.service";
 
 const createOutage = catchAsync(async (req: Request, res: Response) => {
-  const result = await OutageService.createOutage(req.body);
+  const result = await OutageService.createOutage(
+    req.body,
+    req.user?.userId as string,
+  );
 
   sendResponse(res, {
     statusCode: httpStatus.CREATED,
@@ -55,6 +58,7 @@ const updateOutageStatus = catchAsync(async (req: Request, res: Response) => {
   const result = await OutageService.updateOutageStatus(
     req.params.id as string,
     req.body,
+    req.user?.userId as string,
   );
 
   sendResponse(res, {

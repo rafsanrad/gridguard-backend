@@ -5,7 +5,10 @@ import { sendResponse } from "../../utils/sendResponse";
 import { LoadSheddingService } from "./loadShedding.service";
 
 const createLoadShedding = catchAsync(async (req: Request, res: Response) => {
-  const result = await LoadSheddingService.createLoadShedding(req.body);
+  const result = await LoadSheddingService.createLoadShedding(
+    req.body,
+    req.user?.userId as string,
+  );
 
   sendResponse(res, {
     statusCode: httpStatus.CREATED,

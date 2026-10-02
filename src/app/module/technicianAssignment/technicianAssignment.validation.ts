@@ -9,10 +9,6 @@ const createTechnicianAssignmentSchema = z.object({
     .string()
     .min(1, "Technician ID is required"),
 
-  assignedById: z
-    .string()
-    .min(1, "Assigned by user ID is required"),
-
   notes: z
     .string()
     .max(500, "Notes cannot exceed 500 characters")

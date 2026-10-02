@@ -50,7 +50,11 @@ const getAllNotifications = async () => {
   return notifications;
 };
 
-const getSingleNotification = async (id: string) => {
+const getSingleNotification = async (
+  id: string,
+  userId?: string,
+  userRole?: string,
+) => {
   const notification = await prisma.notification.findUnique({
     where: {
       id,
@@ -70,10 +74,18 @@ const getSingleNotification = async (id: string) => {
     throw new AppError(404, "Notification not found");
   }
 
+  if (userRole === "CUSTOMER" && notification.userId !== userId) {
+    throw new AppError(403, "You can only access your own notification");
+  }
+
   return notification;
 };
 
-const markNotificationAsRead = async (id: string) => {
+const markNotificationAsRead = async (
+  id: string,
+  userId?: string,
+  userRole?: string,
+) => {
   const notification = await prisma.notification.findUnique({
     where: {
       id,
@@ -84,11 +96,15 @@ const markNotificationAsRead = async (id: string) => {
     throw new AppError(404, "Notification not found");
   }
 
+  if (userRole === "CUSTOMER" && notification.userId !== userId) {
+    throw new AppError(403, "You can only update your own notification");
+  }
+
   if (notification.isRead) {
     return notification;
   }
 
-  const updatedNotification = await prisma.notification.update({
+  return await prisma.notification.update({
     where: {
       id,
     },
@@ -97,8 +113,6 @@ const markNotificationAsRead = async (id: string) => {
       readAt: new Date(),
     },
   });
-
-  return updatedNotification;
 };
 
 export const NotificationService = {

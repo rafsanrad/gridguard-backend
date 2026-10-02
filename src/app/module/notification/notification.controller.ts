@@ -30,12 +30,14 @@ const getSingleNotification = catchAsync(
   async (req: Request, res: Response) => {
     const result = await NotificationService.getSingleNotification(
       req.params.id as string,
+      req.user?.userId,
+      req.user?.role,
     );
 
     sendResponse(res, {
       statusCode: httpStatus.OK,
       success: true,
-      message: "Notification fetched successfully",
+      message: "Notification retrieved successfully",
       data: result,
     });
   },
@@ -45,6 +47,8 @@ const markNotificationAsRead = catchAsync(
   async (req: Request, res: Response) => {
     const result = await NotificationService.markNotificationAsRead(
       req.params.id as string,
+      req.user?.userId,
+      req.user?.role,
     );
 
     sendResponse(res, {

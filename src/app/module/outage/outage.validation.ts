@@ -34,10 +34,6 @@ const createOutageSchema = z
     feederId: z
       .string()
       .min(1, "Feeder ID is required"),
-
-    reportedById: z
-      .string()
-      .optional(),
   })
   .refine(
     (data) => {

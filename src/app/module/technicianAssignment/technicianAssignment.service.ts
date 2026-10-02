@@ -4,11 +4,11 @@ import { ICreateTechnicianAssignmentPayload } from "./technicianAssignment.inter
 
 const createTechnicianAssignment = async (
   payload: ICreateTechnicianAssignmentPayload,
+  assignedById: string,
 ) => {
-  const outage = await prisma.outage.findFirst({
+  const outage = await prisma.outage.findUnique({
     where: {
       id: payload.outageId,
-      deletedAt: null,
     },
   });
 
@@ -23,10 +23,9 @@ const createTechnicianAssignment = async (
     );
   }
 
-  const technician = await prisma.technician.findFirst({
+  const technician = await prisma.technician.findUnique({
     where: {
       id: payload.technicianId,
-      isActive: true,
     },
   });
 
@@ -34,14 +33,17 @@ const createTechnicianAssignment = async (
     throw new AppError(404, "Technician not found");
   }
 
+  if (!technician.isActive) {
+    throw new AppError(400, "Technician is inactive");
+  }
+
   if (technician.status !== "AVAILABLE") {
     throw new AppError(400, "Technician is not available");
   }
 
-  const assignedBy = await prisma.user.findFirst({
+  const assignedBy = await prisma.user.findUnique({
     where: {
-      id: payload.assignedById,
-      deletedAt: null,
+      id: assignedById,
     },
   });
 
@@ -49,24 +51,13 @@ const createTechnicianAssignment = async (
     throw new AppError(404, "Assigning user not found");
   }
 
-  const assignment = await prisma.$transaction(async (tx) => {
-    const newAssignment = await tx.technicianAssignment.create({
+  const result = await prisma.$transaction(async (tx) => {
+    const assignment = await tx.technicianAssignment.create({
       data: {
         outageId: payload.outageId,
         technicianId: payload.technicianId,
-        assignedById: payload.assignedById,
+        assignedById: assignedById,
         notes: payload.notes,
-      },
-      include: {
-        outage: true,
-        technician: true,
-        assignedBy: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
       },
     });
 
@@ -88,10 +79,32 @@ const createTechnicianAssignment = async (
       },
     });
 
-    return newAssignment;
+    await tx.auditLog.create({
+      data: {
+        action: "ASSIGN",
+        entity: "TechnicianAssignment",
+        entityId: assignment.id,
+
+        oldValues: {
+          technicianStatus: "AVAILABLE",
+          outageStatus: outage.status,
+        },
+
+        newValues: {
+          technicianStatus: "ASSIGNED",
+          outageStatus: "ASSIGNED",
+          technicianId: technician.id,
+          outageId: outage.id,
+        },
+
+        actorId: assignedById,
+      },
+    });
+
+    return assignment;
   });
 
-  return assignment;
+  return result;
 };
 
 const getAllTechnicianAssignments = async () => {

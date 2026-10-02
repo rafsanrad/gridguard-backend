@@ -25,21 +25,12 @@ const createLoadSheddingSchema = z
       .max(255, "Reason cannot exceed 255 characters")
       .optional(),
 
-    feederId: z
-      .string()
-      .min(1, "Feeder ID is required"),
-
-    createdById: z
-      .string()
-      .min(1, "Creator ID is required"),
+    feederId: z.string().min(1, "Feeder ID is required"),
   })
-  .refine(
-    (data) => data.endDateTime > data.startDateTime,
-    {
-      message: "End date and time must be after start date and time",
-      path: ["endDateTime"],
-    },
-  );
+  .refine((data) => data.endDateTime > data.startDateTime, {
+    message: "End date and time must be after start date and time",
+    path: ["endDateTime"],
+  });
 
 const updateLoadSheddingSchema = z
   .object({

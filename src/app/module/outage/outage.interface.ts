@@ -9,7 +9,6 @@ export interface ICreateOutagePayload {
   cause?: string;
   affectedCustomers?: number;
   feederId: string;
-  reportedById?: string;
 }
 
 export interface IUpdateOutagePayload {

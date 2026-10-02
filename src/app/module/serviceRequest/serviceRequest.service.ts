@@ -7,10 +7,11 @@ import {
 
 const createServiceRequest = async (
   payload: ICreateServiceRequestPayload,
+  customerId: string,
 ) => {
   const customer = await prisma.user.findFirst({
     where: {
-      id: payload.customerId,
+      id: customerId,
       deletedAt: null,
     },
   });
@@ -20,83 +21,80 @@ const createServiceRequest = async (
   }
 
   if (customer.role !== "CUSTOMER") {
-    throw new AppError(
-      403,
-      "Only customers can create service requests",
-    );
+    throw new AppError(403, "Only customers can create service requests");
   }
 
-  const serviceRequest =
-    await prisma.serviceRequest.create({
-      data: {
-        title: payload.title,
-        description: payload.description,
-        amount: payload.amount,
-        customerId: payload.customerId,
-      },
-      include: {
-        customer: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-          },
+  const serviceRequest = await prisma.serviceRequest.create({
+    data: {
+      title: payload.title,
+      description: payload.description,
+      amount: payload.amount,
+      customerId: customerId,
+    },
+    include: {
+      customer: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
         },
       },
-    });
+    },
+  });
 
   return serviceRequest;
 };
 
 const getAllServiceRequests = async () => {
-  const serviceRequests =
-    await prisma.serviceRequest.findMany({
-      include: {
-        customer: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-          },
+  const serviceRequests = await prisma.serviceRequest.findMany({
+    include: {
+      customer: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
         },
-        payments: true,
       },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+      payments: true,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
 
   return serviceRequests;
 };
 
 const getSingleServiceRequest = async (
   id: string,
+  userId?: string,
+  userRole?: string,
 ) => {
-  const serviceRequest =
-    await prisma.serviceRequest.findUnique({
-      where: {
-        id,
-      },
-      include: {
-        customer: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-          },
+  const serviceRequest = await prisma.serviceRequest.findUnique({
+    where: {
+      id,
+    },
+    include: {
+      customer: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
         },
-        payments: true,
       },
-    });
+      payments: true,
+    },
+  });
 
   if (!serviceRequest) {
-    throw new AppError(
-      404,
-      "Service request not found",
-    );
+    throw new AppError(404, "Service request not found");
+  }
+
+  if (userRole === "CUSTOMER" && serviceRequest.customerId !== userId) {
+    throw new AppError(403, "You can only access your own service request");
   }
 
   return serviceRequest;
@@ -106,18 +104,14 @@ const updateServiceRequest = async (
   id: string,
   payload: IUpdateServiceRequestPayload,
 ) => {
-  const existingRequest =
-    await prisma.serviceRequest.findUnique({
-      where: {
-        id,
-      },
-    });
+  const existingRequest = await prisma.serviceRequest.findUnique({
+    where: {
+      id,
+    },
+  });
 
   if (!existingRequest) {
-    throw new AppError(
-      404,
-      "Service request not found",
-    );
+    throw new AppError(404, "Service request not found");
   }
 
   if (
@@ -131,23 +125,22 @@ const updateServiceRequest = async (
     );
   }
 
-  const updatedRequest =
-    await prisma.serviceRequest.update({
-      where: {
-        id,
-      },
-      data: payload,
-      include: {
-        customer: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-          },
+  const updatedRequest = await prisma.serviceRequest.update({
+    where: {
+      id,
+    },
+    data: payload,
+    include: {
+      customer: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
         },
       },
-    });
+    },
+  });
 
   return updatedRequest;
 };

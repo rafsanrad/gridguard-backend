@@ -6,7 +6,10 @@ import { sendResponse } from "../../utils/sendResponse";
 import { OutageReportService } from "./outageReport.service";
 
 const createOutageReport = catchAsync(async (req: Request, res: Response) => {
-  const result = await OutageReportService.createOutageReport(req.body);
+  const result = await OutageReportService.createOutageReport(
+    req.body,
+    req.user?.userId as string,
+  );
 
   sendResponse(res, {
     statusCode: httpStatus.CREATED,
@@ -31,12 +34,14 @@ const getSingleOutageReport = catchAsync(
   async (req: Request, res: Response) => {
     const result = await OutageReportService.getSingleOutageReport(
       req.params.id as string,
+      req.user?.userId,
+      req.user?.role,
     );
 
     sendResponse(res, {
       statusCode: httpStatus.OK,
       success: true,
-      message: "Outage report fetched successfully",
+      message: "Outage report retrieved successfully",
       data: result,
     });
   },

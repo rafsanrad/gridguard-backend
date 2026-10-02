@@ -2,11 +2,14 @@ import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/AppError";
 import { ICreateOutageReportPayload } from "./outageReport.interface";
 
-const createOutageReport = async (payload: ICreateOutageReportPayload) => {
+const createOutageReport = async (
+  payload: ICreateOutageReportPayload,
+  customerId: string,
+) => {
   // Check whether the customer exists
   const customer = await prisma.user.findFirst({
     where: {
-      id: payload.customerId,
+      id: customerId,
       deletedAt: null,
     },
   });
@@ -39,7 +42,7 @@ const createOutageReport = async (payload: ICreateOutageReportPayload) => {
   if (payload.outageId) {
     const existingReport = await prisma.outageReport.findFirst({
       where: {
-        customerId: payload.customerId,
+        customerId: customerId,
         outageId: payload.outageId,
       },
     });
@@ -54,7 +57,7 @@ const createOutageReport = async (payload: ICreateOutageReportPayload) => {
     data: {
       description: payload.description,
       location: payload.location,
-      customerId: payload.customerId,
+      customerId: customerId,
       outageId: payload.outageId,
     },
 
@@ -98,12 +101,15 @@ const getAllOutageReports = async () => {
   return reports;
 };
 
-const getSingleOutageReport = async (id: string) => {
+const getSingleOutageReport = async (
+  id: string,
+  userId?: string,
+  userRole?: string,
+) => {
   const report = await prisma.outageReport.findUnique({
     where: {
       id,
     },
-
     include: {
       customer: {
         select: {
@@ -113,13 +119,16 @@ const getSingleOutageReport = async (id: string) => {
           phone: true,
         },
       },
-
       outage: true,
     },
   });
 
   if (!report) {
     throw new AppError(404, "Outage report not found");
+  }
+
+  if (userRole === "CUSTOMER" && report.customerId !== userId) {
+    throw new AppError(403, "You can only access your own outage report");
   }
 
   return report;

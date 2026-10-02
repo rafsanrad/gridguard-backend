@@ -6,7 +6,10 @@ import { PaymentService } from "./payment.service";
 import { AppError } from "../../utils/AppError";
 
 const createPayment = catchAsync(async (req: Request, res: Response) => {
-  const result = await PaymentService.createPayment(req.body);
+  const result = await PaymentService.createPayment(
+    req.body,
+    req.user?.userId as string,
+  );
 
   sendResponse(res, {
     statusCode: httpStatus.CREATED,
@@ -23,6 +26,32 @@ const executePayment = catchAsync(async (req: Request, res: Response) => {
     statusCode: httpStatus.OK,
     success: true,
     message: "Payment completed successfully",
+    data: result,
+  });
+});
+
+const getAllPayments = catchAsync(async (_req: Request, res: Response) => {
+  const result = await PaymentService.getAllPayments();
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Payments retrieved successfully",
+    data: result,
+  });
+});
+
+const getSinglePayment = catchAsync(async (req: Request, res: Response) => {
+  const result = await PaymentService.getSinglePayment(
+    req.params.id as string,
+    req.user?.userId,
+    req.user?.role,
+  );
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Payment retrieved successfully",
     data: result,
   });
 });
@@ -63,5 +92,7 @@ const bkashCallback = catchAsync(async (req: Request, res: Response) => {
 export const PaymentController = {
   createPayment,
   executePayment,
-  bkashCallback
+  getAllPayments,
+  getSinglePayment,
+  bkashCallback,
 };

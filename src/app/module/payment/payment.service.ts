@@ -4,7 +4,10 @@ import { getBkashIdToken } from "../../lib/bkash";
 import config from "../../config";
 import { ICreatePaymentPayload } from "./payment.interface";
 
-const createPayment = async (payload: ICreatePaymentPayload) => {
+const createPayment = async (
+  payload: ICreatePaymentPayload,
+  customerId: string,
+) => {
   const serviceRequest = await prisma.serviceRequest.findUnique({
     where: {
       id: payload.serviceRequestId,
@@ -15,7 +18,7 @@ const createPayment = async (payload: ICreatePaymentPayload) => {
     throw new AppError(404, "Service request not found");
   }
 
-  if (serviceRequest.customerId !== payload.customerId) {
+  if (serviceRequest.customerId !== customerId) {
     throw new AppError(
       403,
       "This service request does not belong to the customer",
@@ -62,7 +65,7 @@ const createPayment = async (payload: ICreatePaymentPayload) => {
 
       body: JSON.stringify({
         mode: "0011",
-        payerReference: payload.customerId,
+        payerReference: customerId,
         callbackURL: config.bkash_callback_url,
         amount: serviceRequest.amount.toString(),
         currency: "BDT",
@@ -90,7 +93,7 @@ const createPayment = async (payload: ICreatePaymentPayload) => {
       status: "PENDING",
       providerPaymentId: bkashResponse.paymentID,
       checkoutUrl: bkashResponse.bkashURL,
-      customerId: payload.customerId,
+      customerId: customerId,
       serviceRequestId: payload.serviceRequestId,
     },
   });
@@ -123,6 +126,7 @@ const executePayment = async (paymentID: string) => {
     `${config.bkash_base_url}/tokenized/checkout/execute`,
     {
       method: "POST",
+
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
@@ -177,13 +181,98 @@ const executePayment = async (paymentID: string) => {
       },
     });
 
+    await tx.auditLog.create({
+      data: {
+        action: "PAYMENT",
+        entity: "Payment",
+        entityId: payment.id,
+
+        oldValues: {
+          status: "PENDING",
+        },
+
+        newValues: {
+          status: "SUCCESS",
+          transactionId: bkashResponse.trxID,
+        },
+
+        actorId: payment.customerId,
+      },
+    });
+
     return updatedPayment;
   });
 
   return result;
 };
 
+const getAllPayments = async () => {
+  return await prisma.payment.findMany({
+    include: {
+      customer: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+      serviceRequest: {
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          amount: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+};
+
+const getSinglePayment = async (
+  id: string,
+  userId?: string,
+  userRole?: string,
+) => {
+  const payment = await prisma.payment.findUnique({
+    where: {
+      id,
+    },
+    include: {
+      customer: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+      serviceRequest: {
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          amount: true,
+        },
+      },
+    },
+  });
+
+  if (!payment) {
+    throw new AppError(404, "Payment not found");
+  }
+
+  if (userRole === "CUSTOMER" && payment.customerId !== userId) {
+    throw new AppError(403, "You can only access your own payment");
+  }
+
+  return payment;
+};
+
 export const PaymentService = {
   createPayment,
-  executePayment
+  executePayment,
+  getAllPayments,
+  getSinglePayment
 };

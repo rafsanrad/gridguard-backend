@@ -2,7 +2,6 @@ export interface ICreateServiceRequestPayload {
   title: string;
   description?: string;
   amount: number;
-  customerId: string;
 }
 
 export interface IUpdateServiceRequestPayload {
