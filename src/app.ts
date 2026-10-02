@@ -11,6 +11,7 @@ import { SubstationRoutes } from './app/module/substation/substation.route'
 import { FeederRoutes } from './app/module/feeder/feeder.route'
 import { AreaRoutes } from './app/module/area/area.route'
 import { TechnicianRoutes } from './app/module/technician/technician.route'
+import { LoadSheddingRoutes } from './app/module/loadShedding/loadShedding.route'
 
 const app: Application = express()
 
@@ -34,6 +35,7 @@ app.use('/api/v1/substations', SubstationRoutes)
 app.use('/api/v1/feeders', FeederRoutes)
 app.use('/api/v1/areas', AreaRoutes)
 app.use('/api/v1/technicians', TechnicianRoutes)
+app.use('/api/v1/load-shedding', LoadSheddingRoutes)
 
 // Basic route
 app.get('/', async (req: Request, res: Response) => {
