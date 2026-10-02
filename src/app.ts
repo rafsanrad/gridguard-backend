@@ -12,6 +12,7 @@ import { FeederRoutes } from './app/module/feeder/feeder.route'
 import { AreaRoutes } from './app/module/area/area.route'
 import { TechnicianRoutes } from './app/module/technician/technician.route'
 import { LoadSheddingRoutes } from './app/module/loadShedding/loadShedding.route'
+import { OutageRoutes } from './app/module/outage/outage.route'
 
 const app: Application = express()
 
@@ -36,6 +37,7 @@ app.use('/api/v1/feeders', FeederRoutes)
 app.use('/api/v1/areas', AreaRoutes)
 app.use('/api/v1/technicians', TechnicianRoutes)
 app.use('/api/v1/load-shedding', LoadSheddingRoutes)
+app.use('/api/v1/outages', OutageRoutes)
 
 // Basic route
 app.get('/', async (req: Request, res: Response) => {
