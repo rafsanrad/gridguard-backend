@@ -17,6 +17,7 @@ import { OutageReportRoutes } from "./app/module/outageReport/outageReport.route
 import { TechnicianAssignmentRoutes } from "./app/module/technicianAssignment/technicianAssignment.route";
 import { NotificationRoutes } from "./app/module/notification/notification.route";
 import { ServiceRequestRoutes } from "./app/module/serviceRequest/serviceRequest.route";
+import { PaymentRoutes } from "./app/module/payment/payment.route";
 
 const app: Application = express();
 
@@ -46,6 +47,7 @@ app.use("/api/v1/outage-reports", OutageReportRoutes);
 app.use("/api/v1/technician-assignments", TechnicianAssignmentRoutes);
 app.use("/api/v1/notifications", NotificationRoutes);
 app.use("/api/v1/service-requests", ServiceRequestRoutes);
+app.use("/api/v1/payments", PaymentRoutes);
 
 // Basic route
 app.get("/", async (req: Request, res: Response) => {
