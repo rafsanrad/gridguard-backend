@@ -13,6 +13,7 @@ declare global {
         search?: string;
         sortBy?: string;
         sortOrder: "asc" | "desc";
+        role?: "CUSTOMER" | "OPERATOR" | "ADMIN";
       };
     }
   }

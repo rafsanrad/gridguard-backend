@@ -19,6 +19,7 @@ import { NotificationRoutes } from "./app/module/notification/notification.route
 import { ServiceRequestRoutes } from "./app/module/serviceRequest/serviceRequest.route";
 import { PaymentRoutes } from "./app/module/payment/payment.route";
 import { AuditLogRoutes } from "./app/module/auditLog/auditLog.route";
+import { UserRoutes } from "./app/module/user/user.route";
 
 const app: Application = express();
 
@@ -36,6 +37,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
 
+app.use("/api/v1/users", UserRoutes);
 app.use("/api/v1/auth", AuthRoutes);
 app.use("/api/v1/zones", ZoneRoutes);
 app.use("/api/v1/substations", SubstationRoutes);
