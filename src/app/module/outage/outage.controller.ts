@@ -18,8 +18,8 @@ const createOutage = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const getAllOutages = catchAsync(async (_req: Request, res: Response) => {
-  const result = await OutageService.getAllOutages();
+const getAllOutages = catchAsync(async (req: Request, res: Response) => {
+  const result = await OutageService.getAllOutages(req.validatedQuery);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,

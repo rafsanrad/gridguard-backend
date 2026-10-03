@@ -30,14 +30,15 @@ const executePayment = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const getAllPayments = catchAsync(async (_req: Request, res: Response) => {
-  const result = await PaymentService.getAllPayments();
+const getAllPayments = catchAsync(async (req: Request, res: Response) => {
+  const result = await PaymentService.getAllPayments(req.validatedQuery);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
     message: "Payments retrieved successfully",
-    data: result,
+    data: result.data,
+    meta: result.meta
   });
 });
 

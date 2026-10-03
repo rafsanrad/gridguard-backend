@@ -1,5 +1,7 @@
+import { IQueryParams } from "../../interfaces/common";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/AppError";
+import { getSafeSortField } from "../../utils/query";
 import {
   ICreateTechnicianPayload,
   IUpdateTechnicianPayload,
@@ -23,18 +25,90 @@ const createTechnician = async (payload: ICreateTechnicianPayload) => {
   return technician;
 };
 
-const getAllTechnicians = async () => {
-  const technicians = await prisma.technician.findMany({
-    where: {
-      isActive: true,
-    },
+const getAllTechnicians = async (query?: IQueryParams) => {
+  const page = query?.page ?? 1;
+  const limit = query?.limit ?? 10;
+  const skip = (page - 1) * limit;
 
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
+  const search = query?.search;
+  const sortBy = query?.sortBy;
+  const sortOrder = query?.sortOrder ?? "desc";
 
-  return technicians;
+  const safeSortBy = getSafeSortField(
+    sortBy,
+    [
+      "employeeId",
+      "name",
+      "phone",
+      "specialization",
+      "status",
+      "createdAt",
+      "updatedAt",
+    ],
+    "createdAt",
+  );
+
+  const where = {
+    isActive: true,
+
+    ...(search
+      ? {
+          OR: [
+            {
+              employeeId: {
+                contains: search,
+                mode: "insensitive" as const,
+              },
+            },
+            {
+              name: {
+                contains: search,
+                mode: "insensitive" as const,
+              },
+            },
+            {
+              phone: {
+                contains: search,
+                mode: "insensitive" as const,
+              },
+            },
+            {
+              specialization: {
+                contains: search,
+                mode: "insensitive" as const,
+              },
+            },
+          ],
+        }
+      : {}),
+  };
+
+  const [technicians, total] = await prisma.$transaction([
+    prisma.technician.findMany({
+      where,
+      skip,
+      take: limit,
+
+      orderBy: {
+        [safeSortBy]: sortOrder,
+      },
+    }),
+
+    prisma.technician.count({
+      where,
+    }),
+  ]);
+
+  return {
+    data: technicians,
+
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
 };
 
 const getSingleTechnician = async (id: string) => {

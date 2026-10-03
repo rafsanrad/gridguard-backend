@@ -15,8 +15,8 @@ const createTechnician = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const getAllTechnicians = catchAsync(async (_req: Request, res: Response) => {
-  const result = await TechnicianService.getAllTechnicians();
+const getAllTechnicians = catchAsync(async (req: Request, res: Response) => {
+  const result = await TechnicianService.getAllTechnicians(req.validatedQuery);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,

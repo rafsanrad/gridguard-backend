@@ -1,5 +1,7 @@
+import { IQueryParams } from "../../interfaces/common";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/AppError";
+import { getSafeSortField } from "../../utils/query";
 import { ICreateAreaPayload, IUpdateAreaPayload } from "./area.interface";
 
 const createArea = async (payload: ICreateAreaPayload) => {
@@ -8,7 +10,7 @@ const createArea = async (payload: ICreateAreaPayload) => {
       id: payload.feederId,
     },
   });
-  
+
   if (!feeder) {
     throw new AppError(404, "Feeder not found");
   }
@@ -40,30 +42,94 @@ const createArea = async (payload: ICreateAreaPayload) => {
   return area;
 };
 
-const getAllAreas = async () => {
-  const areas = await prisma.area.findMany({
-    where: {
-      isActive: true,
-    },
+const getAllAreas = async (query?: IQueryParams) => {
+  const page = query?.page ?? 1;
+  const limit = query?.limit ?? 10;
+  const skip = (page - 1) * limit;
 
-    include: {
-      feeder: {
-        include: {
-          substation: {
-            include: {
-              zone: true,
+  const search = query?.search;
+  const sortBy = query?.sortBy;
+  const sortOrder = query?.sortOrder ?? "desc";
+
+  const safeSortBy = getSafeSortField(
+    sortBy,
+    ["name", "code", "createdAt", "updatedAt"],
+    "createdAt",
+  );
+
+  const where = {
+    isActive: true,
+
+    ...(search
+      ? {
+          OR: [
+            {
+              name: {
+                contains: search,
+                mode: "insensitive" as const,
+              },
+            },
+            {
+              code: {
+                contains: search,
+                mode: "insensitive" as const,
+              },
+            },
+            {
+              address: {
+                contains: search,
+                mode: "insensitive" as const,
+              },
+            },
+            {
+              description: {
+                contains: search,
+                mode: "insensitive" as const,
+              },
+            },
+          ],
+        }
+      : {}),
+  };
+
+  const [areas, total] = await prisma.$transaction([
+    prisma.area.findMany({
+      where,
+      skip,
+      take: limit,
+
+      include: {
+        feeder: {
+          include: {
+            substation: {
+              include: {
+                zone: true,
+              },
             },
           },
         },
       },
-    },
 
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
+      orderBy: {
+        [safeSortBy]: sortOrder,
+      },
+    }),
 
-  return areas;
+    prisma.area.count({
+      where,
+    }),
+  ]);
+
+  return {
+    data: areas,
+
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
 };
 
 const getSingleArea = async (id: string) => {

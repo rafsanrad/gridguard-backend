@@ -15,14 +15,15 @@ const createSubstation = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const getAllSubstations = catchAsync(async (_req: Request, res: Response) => {
-  const result = await SubstationService.getAllSubstations();
+const getAllSubstations = catchAsync(async (req: Request, res: Response) => {
+  const result = await SubstationService.getAllSubstations(req.validatedQuery);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
     message: "Substations fetched successfully",
-    data: result,
+    data: result.data,
+    meta: result.meta,
   });
 });
 

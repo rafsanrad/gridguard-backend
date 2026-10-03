@@ -15,14 +15,15 @@ const createZone = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const getAllZones = catchAsync(async (_req: Request, res: Response) => {
-  const result = await ZoneService.getAllZones();
+const getAllZones = catchAsync(async (req: Request, res: Response) => {
+  const result = await ZoneService.getAllZones(req.validatedQuery);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: "Zones fetched successfully",
-    data: result,
+    message: "Zones retrieved successfully",
+    data: result.data,
+    meta: result.meta,
   });
 });
 
@@ -68,5 +69,5 @@ export const ZoneController = {
   getAllZones,
   getSingleZone,
   updateZone,
-  deleteZone
+  deleteZone,
 };

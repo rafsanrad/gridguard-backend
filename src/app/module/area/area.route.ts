@@ -6,6 +6,7 @@ import { validateRequest } from "../../middleware/validateRequest";
 
 import { AreaController } from "./area.controller";
 import { AreaValidation } from "./area.validation";
+import { validateQuery } from "../../middleware/validateQuery";
 
 const router = Router();
 
@@ -16,7 +17,12 @@ router.post(
   AreaController.createArea,
 );
 
-router.get("/", auth(Role.ADMIN, Role.OPERATOR), AreaController.getAllAreas);
+router.get(
+  "/",
+  auth(Role.ADMIN, Role.OPERATOR),
+  validateQuery,
+  AreaController.getAllAreas,
+);
 
 router.get(
   "/:id",

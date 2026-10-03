@@ -1,5 +1,7 @@
+import { IQueryParams } from "../../interfaces/common";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/AppError";
+import { getSafeSortField } from "../../utils/query";
 import { ICreateTechnicianAssignmentPayload } from "./technicianAssignment.interface";
 
 const createTechnicianAssignment = async (
@@ -107,25 +109,92 @@ const createTechnicianAssignment = async (
   return result;
 };
 
-const getAllTechnicianAssignments = async () => {
-  const assignments = await prisma.technicianAssignment.findMany({
-    include: {
-      outage: true,
-      technician: true,
-      assignedBy: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
+const getAllTechnicianAssignments = async (query?: IQueryParams) => {
+  const page = query?.page ?? 1;
+  const limit = query?.limit ?? 10;
+  const skip = (page - 1) * limit;
+
+  const search = query?.search;
+  const sortBy = query?.sortBy;
+  const sortOrder = query?.sortOrder ?? "desc";
+
+  const safeSortBy = getSafeSortField(
+    sortBy,
+    ["assignedAt", "startedAt", "completedAt", "createdAt", "updatedAt"],
+    "createdAt",
+  );
+
+  const where = {
+    ...(search
+      ? {
+          OR: [
+            {
+              notes: {
+                contains: search,
+                mode: "insensitive" as const,
+              },
+            },
+            {
+              technician: {
+                name: {
+                  contains: search,
+                  mode: "insensitive" as const,
+                },
+              },
+            },
+            {
+              technician: {
+                employeeId: {
+                  contains: search,
+                  mode: "insensitive" as const,
+                },
+              },
+            },
+          ],
+        }
+      : {}),
+  };
+
+  const [assignments, total] = await prisma.$transaction([
+    prisma.technicianAssignment.findMany({
+      where,
+      skip,
+      take: limit,
+
+      include: {
+        outage: true,
+
+        technician: true,
+
+        assignedBy: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
         },
       },
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
 
-  return assignments;
+      orderBy: {
+        [safeSortBy]: sortOrder,
+      },
+    }),
+
+    prisma.technicianAssignment.count({
+      where,
+    }),
+  ]);
+
+  return {
+    data: assignments,
+
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
 };
 
 const getSingleTechnicianAssignment = async (id: string) => {

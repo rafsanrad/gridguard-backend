@@ -6,6 +6,8 @@ import {
   IUpdateOutageStatusPayload,
 } from "./outage.interface";
 import { OutageStatus } from "../../../generated/prisma/enums";
+import { getSafeSortField } from "../../utils/query";
+import { IQueryParams } from "../../interfaces/common";
 
 const createOutage = async (
   payload: ICreateOutagePayload,
@@ -54,29 +56,95 @@ const createOutage = async (
   return outage;
 };
 
-const getAllOutages = async () => {
-  const outages = await prisma.outage.findMany({
-    where: {
-      deletedAt: null,
-    },
+const getAllOutages = async (query?: IQueryParams) => {
+  const page = query?.page ?? 1;
+  const limit = query?.limit ?? 10;
+  const skip = (page - 1) * limit;
 
-    include: {
-      feeder: true,
-      reportedBy: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
+  const search = query?.search;
+  const sortBy = query?.sortBy;
+  const sortOrder = query?.sortOrder ?? "desc";
+
+  const safeSortBy = getSafeSortField(
+    sortBy,
+    [
+      "title",
+      "type",
+      "status",
+      "startedAt",
+      "estimatedRestoredAt",
+      "createdAt",
+      "updatedAt",
+    ],
+    "createdAt",
+  );
+
+  const where = {
+    deletedAt: null,
+
+    ...(search
+      ? {
+          OR: [
+            {
+              title: {
+                contains: search,
+                mode: "insensitive" as const,
+              },
+            },
+            {
+              description: {
+                contains: search,
+                mode: "insensitive" as const,
+              },
+            },
+            {
+              cause: {
+                contains: search,
+                mode: "insensitive" as const,
+              },
+            },
+          ],
+        }
+      : {}),
+  };
+
+  const [outages, total] = await prisma.$transaction([
+    prisma.outage.findMany({
+      where,
+      skip,
+      take: limit,
+
+      include: {
+        feeder: true,
+        reportedBy: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
         },
       },
-    },
 
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
+      orderBy: {
+        [safeSortBy]: sortOrder,
+      },
+    }),
 
-  return outages;
+    prisma.outage.count({
+      where,
+    }),
+  ]);
+
+  return {
+    data: outages,
+
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
 };
 
 const getSingleOutage = async (id: string) => {
@@ -202,7 +270,7 @@ const updateOutageStatus = async (
           status: payload.status,
           notes: payload.notes,
         },
-        actorId
+        actorId,
       },
     });
 

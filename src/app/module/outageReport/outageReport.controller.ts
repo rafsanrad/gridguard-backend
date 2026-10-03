@@ -19,14 +19,17 @@ const createOutageReport = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const getAllOutageReports = catchAsync(async (_req: Request, res: Response) => {
-  const result = await OutageReportService.getAllOutageReports();
+const getAllOutageReports = catchAsync(async (req: Request, res: Response) => {
+  const result = await OutageReportService.getAllOutageReports(
+    req.validatedQuery,
+  );
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
     message: "Outage reports fetched successfully",
-    data: result,
+    data: result.data,
+    meta: result.meta,
   });
 });
 

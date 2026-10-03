@@ -18,8 +18,8 @@ const createLoadShedding = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const getAllLoadShedding = catchAsync(async (_req: Request, res: Response) => {
-  const result = await LoadSheddingService.getAllLoadShedding();
+const getAllLoadShedding = catchAsync(async (req: Request, res: Response) => {
+  const result = await LoadSheddingService.getAllLoadShedding(req.validatedQuery);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,

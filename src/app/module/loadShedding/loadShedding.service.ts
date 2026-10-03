@@ -1,5 +1,7 @@
+import { IQueryParams } from "../../interfaces/common";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/AppError";
+import { getSafeSortField } from "../../utils/query";
 import {
   ICreateLoadSheddingPayload,
   IUpdateLoadSheddingPayload,
@@ -72,26 +74,93 @@ const createLoadShedding = async (
   return schedule;
 };
 
-const getAllLoadShedding = async () => {
-  const schedules = await prisma.loadSheddingSchedule.findMany({
-    include: {
-      feeder: true,
-      createdBy: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          role: true,
+const getAllLoadShedding = async (query?: IQueryParams) => {
+  const page = query?.page ?? 1;
+  const limit = query?.limit ?? 10;
+  const skip = (page - 1) * limit;
+
+  const search = query?.search;
+  const sortBy = query?.sortBy;
+  const sortOrder = query?.sortOrder ?? "desc";
+
+  const safeSortBy = getSafeSortField(
+    sortBy,
+    [
+      "title",
+      "startDateTime",
+      "endDateTime",
+      "status",
+      "createdAt",
+      "updatedAt",
+    ],
+    "startDateTime",
+  );
+
+  const where = {
+    ...(search
+      ? {
+          OR: [
+            {
+              title: {
+                contains: search,
+                mode: "insensitive" as const,
+              },
+            },
+            {
+              description: {
+                contains: search,
+                mode: "insensitive" as const,
+              },
+            },
+            {
+              reason: {
+                contains: search,
+                mode: "insensitive" as const,
+              },
+            },
+          ],
+        }
+      : {}),
+  };
+
+  const [schedules, total] = await prisma.$transaction([
+    prisma.loadSheddingSchedule.findMany({
+      where,
+      skip,
+      take: limit,
+
+      include: {
+        feeder: true,
+        createdBy: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+          },
         },
       },
-    },
 
-    orderBy: {
-      startDateTime: "desc",
-    },
-  });
+      orderBy: {
+        [safeSortBy]: sortOrder,
+      },
+    }),
 
-  return schedules;
+    prisma.loadSheddingSchedule.count({
+      where,
+    }),
+  ]);
+
+  return {
+    data: schedules,
+
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
 };
 
 const getSingleLoadShedding = async (id: string) => {

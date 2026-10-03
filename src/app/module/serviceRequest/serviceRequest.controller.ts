@@ -5,7 +5,10 @@ import { sendResponse } from "../../utils/sendResponse";
 import { ServiceRequestService } from "./serviceRequest.service";
 
 const createServiceRequest = catchAsync(async (req: Request, res: Response) => {
-  const result = await ServiceRequestService.createServiceRequest(req.body,req.user?.userId as string);
+  const result = await ServiceRequestService.createServiceRequest(
+    req.body,
+    req.user?.userId as string,
+  );
 
   sendResponse(res, {
     statusCode: httpStatus.CREATED,
@@ -16,26 +19,28 @@ const createServiceRequest = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getAllServiceRequests = catchAsync(
-  async (_req: Request, res: Response) => {
-    const result = await ServiceRequestService.getAllServiceRequests();
+  async (req: Request, res: Response) => {
+    const result = await ServiceRequestService.getAllServiceRequests(
+      req.validatedQuery,
+    );
 
     sendResponse(res, {
       statusCode: httpStatus.OK,
       success: true,
       message: "Service requests fetched successfully",
-      data: result,
+      data: result.data,
+      meta: result.meta,
     });
   },
 );
 
 const getSingleServiceRequest = catchAsync(
   async (req: Request, res: Response) => {
-    const result =
-      await ServiceRequestService.getSingleServiceRequest(
-        req.params.id as string,
-        req.user?.userId,
-        req.user?.role,
-      );
+    const result = await ServiceRequestService.getSingleServiceRequest(
+      req.params.id as string,
+      req.user?.userId,
+      req.user?.role,
+    );
 
     sendResponse(res, {
       statusCode: httpStatus.OK,

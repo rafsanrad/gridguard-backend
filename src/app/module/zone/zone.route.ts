@@ -5,6 +5,7 @@ import { auth } from "../../middleware/checkAuth";
 import { validateRequest } from "../../middleware/validateRequest";
 import { ZoneController } from "./zone.controller";
 import { ZoneValidation } from "./zone.validations";
+import { validateQuery } from "../../middleware/validateQuery";
 
 
 const router = Router();
@@ -16,7 +17,12 @@ router.post(
   ZoneController.createZone,
 );
 
-router.get("/", auth(Role.ADMIN, Role.OPERATOR), ZoneController.getAllZones);
+router.get(
+  "/",
+  auth(Role.ADMIN, Role.OPERATOR),
+  validateQuery,
+  ZoneController.getAllZones,
+);
 
 router.get(
   "/:id",

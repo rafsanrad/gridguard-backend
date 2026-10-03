@@ -21,15 +21,18 @@ const createTechnicianAssignment = catchAsync(
 );
 
 const getAllTechnicianAssignments = catchAsync(
-  async (_req: Request, res: Response) => {
+  async (req: Request, res: Response) => {
     const result =
-      await TechnicianAssignmentService.getAllTechnicianAssignments();
+      await TechnicianAssignmentService.getAllTechnicianAssignments(
+        req.validatedQuery,
+      );
 
     sendResponse(res, {
       statusCode: httpStatus.OK,
       success: true,
       message: "Technician assignments fetched successfully",
-      data: result,
+      data: result.data,
+      meta: result.meta,
     });
   },
 );

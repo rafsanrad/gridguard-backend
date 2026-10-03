@@ -3,6 +3,8 @@ import { AppError } from "../../utils/AppError";
 import { getBkashIdToken } from "../../lib/bkash";
 import config from "../../config";
 import { ICreatePaymentPayload } from "./payment.interface";
+import { getSafeSortField } from "../../utils/query";
+import { IQueryParams } from "../../interfaces/common";
 
 const createPayment = async (
   payload: ICreatePaymentPayload,
@@ -206,29 +208,121 @@ const executePayment = async (paymentID: string) => {
   return result;
 };
 
-const getAllPayments = async () => {
-  return await prisma.payment.findMany({
-    include: {
-      customer: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
+const getAllPayments = async (query?: IQueryParams) => {
+  const page = query?.page ?? 1;
+  const limit = query?.limit ?? 10;
+  const skip = (page - 1) * limit;
+
+  const search = query?.search;
+  const sortBy = query?.sortBy;
+  const sortOrder = query?.sortOrder ?? "desc";
+
+  const safeSortBy = getSafeSortField(
+    sortBy,
+    [
+      "merchantInvoiceNumber",
+      "amount",
+      "currency",
+      "provider",
+      "status",
+      "transactionId",
+      "paidAt",
+      "createdAt",
+      "updatedAt",
+    ],
+    "createdAt",
+  );
+
+  const where = {
+    ...(search
+      ? {
+          OR: [
+            {
+              merchantInvoiceNumber: {
+                contains: search,
+                mode: "insensitive" as const,
+              },
+            },
+            {
+              transactionId: {
+                contains: search,
+                mode: "insensitive" as const,
+              },
+            },
+            {
+              customer: {
+                name: {
+                  contains: search,
+                  mode: "insensitive" as const,
+                },
+              },
+            },
+            {
+              customer: {
+                email: {
+                  contains: search,
+                  mode: "insensitive" as const,
+                },
+              },
+            },
+            {
+              serviceRequest: {
+                title: {
+                  contains: search,
+                  mode: "insensitive" as const,
+                },
+              },
+            },
+          ],
+        }
+      : {}),
+  };
+
+  const [payments, total] = await prisma.$transaction([
+    prisma.payment.findMany({
+      where,
+      skip,
+      take: limit,
+
+      include: {
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+
+        serviceRequest: {
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            amount: true,
+          },
         },
       },
-      serviceRequest: {
-        select: {
-          id: true,
-          title: true,
-          status: true,
-          amount: true,
-        },
+
+      orderBy: {
+        [safeSortBy]: sortOrder,
       },
+    }),
+
+    prisma.payment.count({
+      where,
+    }),
+  ]);
+
+  return {
+    data: payments,
+
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
     },
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
+  };
 };
 
 const getSinglePayment = async (
@@ -274,5 +368,5 @@ export const PaymentService = {
   createPayment,
   executePayment,
   getAllPayments,
-  getSinglePayment
+  getSinglePayment,
 };

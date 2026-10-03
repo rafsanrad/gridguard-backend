@@ -1,5 +1,7 @@
+import { IQueryParams } from "../../interfaces/common";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/AppError";
+import { getSafeSortField } from "../../utils/query";
 import { ICreateNotificationPayload } from "./notification.interface";
 
 const createNotification = async (payload: ICreateNotificationPayload) => {
@@ -26,28 +28,82 @@ const createNotification = async (payload: ICreateNotificationPayload) => {
   return notification;
 };
 
-const getAllNotifications = async () => {
-  const notifications = await prisma.notification.findMany({
-    where: {
-      user: {
-        deletedAt: null,
-      },
+const getAllNotifications = async (query?: IQueryParams) => {
+  const page = query?.page ?? 1;
+  const limit = query?.limit ?? 10;
+  const skip = (page - 1) * limit;
+
+  const search = query?.search;
+  const sortBy = query?.sortBy;
+  const sortOrder = query?.sortOrder ?? "desc";
+
+  const safeSortBy = getSafeSortField(
+    sortBy,
+    ["title", "type", "isRead", "createdAt", "updatedAt"],
+    "createdAt",
+  );
+
+  const where = {
+    user: {
+      deletedAt: null,
     },
-    include: {
-      user: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
+
+    ...(search
+      ? {
+          OR: [
+            {
+              title: {
+                contains: search,
+                mode: "insensitive" as const,
+              },
+            },
+            {
+              message: {
+                contains: search,
+                mode: "insensitive" as const,
+              },
+            },
+          ],
+        }
+      : {}),
+  };
+
+  const [notifications, total] = await prisma.$transaction([
+    prisma.notification.findMany({
+      where,
+      skip,
+      take: limit,
+
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
         },
       },
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
 
-  return notifications;
+      orderBy: {
+        [safeSortBy]: sortOrder,
+      },
+    }),
+
+    prisma.notification.count({
+      where,
+    }),
+  ]);
+
+  return {
+    data: notifications,
+
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
 };
 
 const getSingleNotification = async (

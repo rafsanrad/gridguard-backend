@@ -3,6 +3,8 @@ import { prisma } from "../../lib/prisma";
 import { ICreateZonePayload, IUpdateZonePayload } from "./zone.interface";
 
 import { AppError } from "../../utils/AppError";
+import { IQueryParams } from "../../interfaces/common";
+import { getSafeSortField } from "../../utils/query";
 
 const createZone = async (payload: ICreateZonePayload) => {
   const existingZone = await prisma.zone.findUnique({
@@ -26,18 +28,72 @@ const createZone = async (payload: ICreateZonePayload) => {
   return zone;
 };
 
-const getAllZones = async () => {
-  const zones = await prisma.zone.findMany({
-    where: {
-      isActive: true,
-    },
+const getAllZones = async (query?: IQueryParams) => {
+  const page = query?.page ?? 1;
+  const limit = query?.limit ?? 10;
+  const skip = (page - 1) * limit;
 
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
+  const search = query?.search;
+  const sortBy = query?.sortBy ?? "createdAt";
+  const sortOrder = query?.sortOrder ?? "desc";
 
-  return zones;
+  const safeSortBy = getSafeSortField(
+    sortBy,
+    ["name", "code", "createdAt", "updatedAt"],
+    "createdAt",
+  );
+
+  const where = {
+    ...(search
+      ? {
+          OR: [
+            {
+              name: {
+                contains: search,
+                mode: "insensitive" as const,
+              },
+            },
+            {
+              code: {
+                contains: search,
+                mode: "insensitive" as const,
+              },
+            },
+            {
+              description: {
+                contains: search,
+                mode: "insensitive" as const,
+              },
+            },
+          ],
+        }
+      : {}),
+  };
+
+  const [zones, total] = await prisma.$transaction([
+    prisma.zone.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: {
+        [safeSortBy]: sortOrder,
+      },
+    }),
+
+    prisma.zone.count({
+      where,
+    }),
+  ]);
+
+  return {
+    data: zones,
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
 };
 
 const getSingleZone = async (id: string) => {
@@ -91,10 +147,7 @@ const updateZone = async (id: string, payload: IUpdateZonePayload) => {
   return updatedZone;
 };
 
-const deleteZone = async (
-  id: string,
-) => {
-
+const deleteZone = async (id: string) => {
   const existingZone = await prisma.zone.findUnique({
     where: {
       id,
@@ -102,21 +155,17 @@ const deleteZone = async (
   });
 
   if (!existingZone) {
-    throw new AppError(
-      404,
-      "Zone not found",
-    );
+    throw new AppError(404, "Zone not found");
   }
 
-  const deletedZone =
-    await prisma.zone.update({
-      where: {
-        id,
-      },
-      data: {
-        isActive: false,
-      },
-    });
+  const deletedZone = await prisma.zone.update({
+    where: {
+      id,
+    },
+    data: {
+      isActive: false,
+    },
+  });
 
   return deletedZone;
 };
@@ -126,5 +175,5 @@ export const ZoneService = {
   getAllZones,
   getSingleZone,
   updateZone,
-  deleteZone
+  deleteZone,
 };

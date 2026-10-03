@@ -15,8 +15,8 @@ const createArea = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const getAllAreas = catchAsync(async (_req: Request, res: Response) => {
-  const result = await AreaService.getAllAreas();
+const getAllAreas = catchAsync(async (req: Request, res: Response) => {
+  const result = await AreaService.getAllAreas(req.validatedQuery);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,

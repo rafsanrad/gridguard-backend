@@ -1,5 +1,7 @@
+import { IQueryParams } from "../../interfaces/common";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/AppError";
+import { getSafeSortField } from "../../utils/query";
 import {
   ICreateServiceRequestPayload,
   IUpdateServiceRequestPayload,
@@ -46,25 +48,97 @@ const createServiceRequest = async (
   return serviceRequest;
 };
 
-const getAllServiceRequests = async () => {
-  const serviceRequests = await prisma.serviceRequest.findMany({
-    include: {
-      customer: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          phone: true,
-        },
-      },
-      payments: true,
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
+const getAllServiceRequests = async (query?: IQueryParams) => {
+  const page = query?.page ?? 1;
+  const limit = query?.limit ?? 10;
+  const skip = (page - 1) * limit;
 
-  return serviceRequests;
+  const search = query?.search;
+  const sortBy = query?.sortBy;
+  const sortOrder = query?.sortOrder ?? "desc";
+
+  const safeSortBy = getSafeSortField(
+    sortBy,
+    ["title", "status", "amount", "createdAt", "updatedAt", "completedAt"],
+    "createdAt",
+  );
+
+  const where = {
+    ...(search
+      ? {
+          OR: [
+            {
+              title: {
+                contains: search,
+                mode: "insensitive" as const,
+              },
+            },
+            {
+              description: {
+                contains: search,
+                mode: "insensitive" as const,
+              },
+            },
+            {
+              customer: {
+                name: {
+                  contains: search,
+                  mode: "insensitive" as const,
+                },
+              },
+            },
+            {
+              customer: {
+                email: {
+                  contains: search,
+                  mode: "insensitive" as const,
+                },
+              },
+            },
+          ],
+        }
+      : {}),
+  };
+
+  const [serviceRequests, total] = await prisma.$transaction([
+    prisma.serviceRequest.findMany({
+      where,
+      skip,
+      take: limit,
+
+      include: {
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+          },
+        },
+
+        payments: true,
+      },
+
+      orderBy: {
+        [safeSortBy]: sortOrder,
+      },
+    }),
+
+    prisma.serviceRequest.count({
+      where,
+    }),
+  ]);
+
+  return {
+    data: serviceRequests,
+
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
 };
 
 const getSingleServiceRequest = async (

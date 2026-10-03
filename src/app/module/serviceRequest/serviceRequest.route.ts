@@ -6,6 +6,7 @@ import { validateRequest } from "../../middleware/validateRequest";
 
 import { ServiceRequestController } from "./serviceRequest.controller";
 import { ServiceRequestValidation } from "./serviceRequest.validation";
+import { validateQuery } from "../../middleware/validateQuery";
 
 const router = Router();
 
@@ -19,6 +20,7 @@ router.post(
 router.get(
   "/",
   auth(Role.ADMIN, Role.OPERATOR),
+  validateQuery,
   ServiceRequestController.getAllServiceRequests,
 );
 

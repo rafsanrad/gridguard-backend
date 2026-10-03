@@ -1,5 +1,7 @@
+import { IQueryParams } from "../../interfaces/common";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/AppError";
+import { getSafeSortField } from "../../utils/query";
 import {
   ICreateSubstationPayload,
   IUpdateSubstationPayload,
@@ -43,20 +45,80 @@ const createSubstation = async (payload: ICreateSubstationPayload) => {
   return substation;
 };
 
-const getAllSubstations = async () => {
-  const substations = await prisma.substation.findMany({
-    where: {
-      isActive: true,
-    },
-    include: {
-      zone: true,
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
+const getAllSubstations = async (query?: IQueryParams) => {
+  const page = query?.page ?? 1;
+  const limit = query?.limit ?? 10;
+  const skip = (page - 1) * limit;
 
-  return substations;
+  const search = query?.search;
+  const sortBy = query?.sortBy;
+  const sortOrder = query?.sortOrder ?? "desc";
+
+  const safeSortBy = getSafeSortField(
+    sortBy,
+    ["name", "code", "createdAt", "updatedAt"],
+    "createdAt",
+  );
+
+  const where = {
+    isActive: true,
+
+    ...(search
+      ? {
+          OR: [
+            {
+              name: {
+                contains: search,
+                mode: "insensitive" as const,
+              },
+            },
+            {
+              code: {
+                contains: search,
+                mode: "insensitive" as const,
+              },
+            },
+            {
+              address: {
+                contains: search,
+                mode: "insensitive" as const,
+              },
+            },
+          ],
+        }
+      : {}),
+  };
+
+  const [substations, total] = await prisma.$transaction([
+    prisma.substation.findMany({
+      where,
+      skip,
+      take: limit,
+
+      include: {
+        zone: true,
+      },
+
+      orderBy: {
+        [safeSortBy]: sortOrder,
+      },
+    }),
+
+    prisma.substation.count({
+      where,
+    }),
+  ]);
+
+  return {
+    data: substations,
+
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
 };
 
 const getSingleSubstation = async (id: string) => {

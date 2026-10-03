@@ -1,5 +1,7 @@
+import { IQueryParams } from "../../interfaces/common";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/AppError";
+import { getSafeSortField } from "../../utils/query";
 import { ICreateFeederPayload, IUpdateFeederPayload } from "./feeder.interface";
 
 const createFeeder = async (payload: ICreateFeederPayload) => {
@@ -42,26 +44,84 @@ const createFeeder = async (payload: ICreateFeederPayload) => {
   return feeder;
 };
 
-const getAllFeeders = async () => {
-  const feeders = await prisma.feeder.findMany({
-    where: {
-      isActive: true,
-    },
+const getAllFeeders = async (query?: IQueryParams) => {
+  const page = query?.page ?? 1;
+  const limit = query?.limit ?? 10;
+  const skip = (page - 1) * limit;
 
-    include: {
-      substation: {
-        include: {
-          zone: true,
+  const search = query?.search;
+  const sortBy = query?.sortBy;
+  const sortOrder = query?.sortOrder ?? "desc";
+
+  const safeSortBy = getSafeSortField(
+    sortBy,
+    ["name", "code", "voltageLevel", "createdAt", "updatedAt"],
+    "createdAt",
+  );
+
+  const where = {
+    isActive: true,
+
+    ...(search
+      ? {
+          OR: [
+            {
+              name: {
+                contains: search,
+                mode: "insensitive" as const,
+              },
+            },
+            {
+              code: {
+                contains: search,
+                mode: "insensitive" as const,
+              },
+            },
+            {
+              voltageLevel: {
+                contains: search,
+                mode: "insensitive" as const,
+              },
+            },
+          ],
+        }
+      : {}),
+  };
+
+  const [feeders, total] = await prisma.$transaction([
+    prisma.feeder.findMany({
+      where,
+      skip,
+      take: limit,
+
+      include: {
+        substation: {
+          include: {
+            zone: true,
+          },
         },
       },
-    },
 
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
+      orderBy: {
+        [safeSortBy]: sortOrder,
+      },
+    }),
 
-  return feeders;
+    prisma.feeder.count({
+      where,
+    }),
+  ]);
+
+  return {
+    data: feeders,
+
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
 };
 
 const getSingleFeeder = async (id: string) => {

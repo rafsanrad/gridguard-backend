@@ -6,6 +6,7 @@ import { validateRequest } from "../../middleware/validateRequest";
 
 import { LoadSheddingController } from "./loadShedding.controller";
 import { LoadSheddingValidation } from "./loadShedding.validation";
+import { validateQuery } from "../../middleware/validateQuery";
 
 const router = Router();
 
@@ -19,6 +20,7 @@ router.post(
 router.get(
   "/",
   auth(Role.ADMIN, Role.OPERATOR),
+  validateQuery,
   LoadSheddingController.getAllLoadShedding,
 );
 

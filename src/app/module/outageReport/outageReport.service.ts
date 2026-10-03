@@ -1,5 +1,7 @@
+import { IQueryParams } from "../../interfaces/common";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/AppError";
+import { getSafeSortField } from "../../utils/query";
 import { ICreateOutageReportPayload } from "./outageReport.interface";
 
 const createOutageReport = async (
@@ -78,27 +80,81 @@ const createOutageReport = async (
   return report;
 };
 
-const getAllOutageReports = async () => {
-  const reports = await prisma.outageReport.findMany({
-    include: {
-      customer: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          phone: true,
+const getAllOutageReports = async (query?: IQueryParams) => {
+  const page = query?.page ?? 1;
+  const limit = query?.limit ?? 10;
+  const skip = (page - 1) * limit;
+
+  const search = query?.search;
+  const sortBy = query?.sortBy;
+  const sortOrder = query?.sortOrder ?? "desc";
+
+  const safeSortBy = getSafeSortField(
+    sortBy,
+    ["reportedAt", "createdAt", "updatedAt"],
+    "createdAt",
+  );
+
+  const where = {
+    ...(search
+      ? {
+          OR: [
+            {
+              description: {
+                contains: search,
+                mode: "insensitive" as const,
+              },
+            },
+            {
+              location: {
+                contains: search,
+                mode: "insensitive" as const,
+              },
+            },
+          ],
+        }
+      : {}),
+  };
+
+  const [reports, total] = await prisma.$transaction([
+    prisma.outageReport.findMany({
+      where,
+      skip,
+      take: limit,
+
+      include: {
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+          },
         },
+
+        outage: true,
       },
 
-      outage: true,
-    },
+      orderBy: {
+        [safeSortBy]: sortOrder,
+      },
+    }),
 
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
+    prisma.outageReport.count({
+      where,
+    }),
+  ]);
 
-  return reports;
+  return {
+    data: reports,
+
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
 };
 
 const getSingleOutageReport = async (

@@ -4,6 +4,7 @@ import { PaymentController } from "./payment.controller";
 import { PaymentValidation } from "./payment.validation";
 import { auth } from "../../middleware/checkAuth";
 import { Role } from "../../../generated/prisma/enums";
+import { validateQuery } from "../../middleware/validateQuery";
 
 const router = Router();
 
@@ -24,6 +25,7 @@ router.post(
 router.get(
   "/",
   auth(Role.ADMIN, Role.OPERATOR),
+  validateQuery,
   PaymentController.getAllPayments,
 );
 

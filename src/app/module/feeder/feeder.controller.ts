@@ -15,8 +15,8 @@ const createFeeder = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const getAllFeeders = catchAsync(async (_req: Request, res: Response) => {
-  const result = await FeederService.getAllFeeders();
+const getAllFeeders = catchAsync(async (req: Request, res: Response) => {
+  const result = await FeederService.getAllFeeders(req.validatedQuery);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,

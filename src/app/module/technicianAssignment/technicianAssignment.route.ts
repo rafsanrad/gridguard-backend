@@ -6,6 +6,7 @@ import { validateRequest } from "../../middleware/validateRequest";
 
 import { TechnicianAssignmentController } from "./technicianAssignment.controller";
 import { TechnicianAssignmentValidation } from "./technicianAssignment.validation";
+import { validateQuery } from "../../middleware/validateQuery";
 
 const router = Router();
 
@@ -21,6 +22,7 @@ router.post(
 router.get(
   "/",
   auth(Role.ADMIN, Role.OPERATOR),
+  validateQuery,
   TechnicianAssignmentController.getAllTechnicianAssignments,
 );
 
