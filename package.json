@@ -6,8 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "prisma generate && tsup",
-    "start": "node dist/server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node dist/server.js"
   },
   "keywords": [],
   "author": "",
@@ -45,5 +44,3 @@
     "typescript": "^7.0.2"
   }
 }
-
-
