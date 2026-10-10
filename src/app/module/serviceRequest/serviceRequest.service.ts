@@ -185,6 +185,7 @@ const getSingleServiceRequest = async (
 const updateServiceRequest = async (
   id: string,
   payload: IUpdateServiceRequestPayload,
+  actorId: string,
 ) => {
   const existingRequest = await prisma.serviceRequest.findUnique({
     where: { id },
@@ -205,25 +206,49 @@ const updateServiceRequest = async (
     );
   }
 
-  const updatedRequest = await prisma.serviceRequest.update({
-    where: { id },
-    data: payload,
-    include: {
-      customer: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          phone: true,
+  const result = await prisma.$transaction(async (tx) => {
+    const updatedRequest = await tx.serviceRequest.update({
+      where: { id },
+      data: payload,
+      include: {
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+          },
         },
       },
-    },
+    });
+
+    if (payload.status && payload.status !== existingRequest.status) {
+      await tx.auditLog.create({
+        data: {
+          action: "STATUS_CHANGE",
+          entity: "ServiceRequest",
+          entityId: id,
+          oldValues: {
+            status: existingRequest.status,
+          },
+          newValues: {
+            status: updatedRequest.status,
+          },
+          actorId,
+        },
+      });
+    }
+
+    return updatedRequest;
   });
 
-  await deleteCacheByPrefix("serviceRequests");
-  await AnalyticsService.invalidateDashboardCache();
+  await Promise.all([
+    deleteCacheByPrefix("serviceRequests"),
+    deleteCacheByPrefix("auditLogs"),
+    AnalyticsService.invalidateDashboardCache(),
+  ]);
 
-  return updatedRequest;
+  return result;
 };
 
 export const ServiceRequestService = {

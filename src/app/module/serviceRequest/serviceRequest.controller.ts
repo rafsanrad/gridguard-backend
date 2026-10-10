@@ -55,6 +55,7 @@ const updateServiceRequest = catchAsync(async (req: Request, res: Response) => {
   const result = await ServiceRequestService.updateServiceRequest(
     req.params.id as string,
     req.body,
+    req.user?.userId as string,
   );
 
   sendResponse(res, {

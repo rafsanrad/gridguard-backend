@@ -276,6 +276,7 @@ const updateOutageStatus = async (
   });
 
   await deleteCacheByPrefix("outages");
+  await deleteCacheByPrefix("auditLogs");
   await AnalyticsService.invalidateDashboardCache();
 
   return result;

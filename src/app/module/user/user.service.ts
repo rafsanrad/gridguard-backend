@@ -2,21 +2,37 @@ import { prisma } from "../../lib/prisma";
 import { IQueryParams } from "../../interfaces/common";
 import { getSafeSortField } from "../../utils/query";
 import { AppError } from "../../utils/AppError";
+import { deleteCacheByPrefix, getCache, setCache } from "../../utils/cache";
 import { IUpdateUserPayload, IUpdateUserStatusPayload } from "./user.interface";
 
 type IUserQueryParams = IQueryParams & {
   role?: "CUSTOMER" | "OPERATOR" | "ADMIN";
 };
 
+const invalidateUserCaches = async () => {
+  await Promise.all([
+    deleteCacheByPrefix("users"),
+    deleteCacheByPrefix("auditLogs"),
+  ]);
+};
+
 const getAllUsers = async (query?: IUserQueryParams) => {
-  const page = query?.page ?? 1;
-  const limit = query?.limit ?? 10;
+  const page = Math.max(1, query?.page ?? 1);
+  const limit = Math.max(1, Math.min(query?.limit ?? 10, 100));
   const skip = (page - 1) * limit;
 
-  const search = query?.search;
-  const role = query?.role;
-  const sortBy = query?.sortBy;
+  const search = query?.search ?? "";
+  const role = query?.role ?? "";
+  const sortBy = query?.sortBy ?? "";
   const sortOrder = query?.sortOrder ?? "desc";
+
+  const cacheKey = `users:${page}:${limit}:${search}:${role}:${sortBy}:${sortOrder}`;
+
+  const cachedData = await getCache(cacheKey);
+
+  if (cachedData) {
+    return cachedData;
+  }
 
   const safeSortBy = getSafeSortField(
     sortBy,
@@ -26,13 +42,7 @@ const getAllUsers = async (query?: IUserQueryParams) => {
 
   const where = {
     deletedAt: null,
-
-    ...(role
-      ? {
-          role,
-        }
-      : {}),
-
+    ...(role ? { role } : {}),
     ...(search
       ? {
           OR: [
@@ -64,7 +74,6 @@ const getAllUsers = async (query?: IUserQueryParams) => {
       where,
       skip,
       take: limit,
-
       select: {
         id: true,
         name: true,
@@ -79,20 +88,15 @@ const getAllUsers = async (query?: IUserQueryParams) => {
         createdAt: true,
         updatedAt: true,
       },
-
       orderBy: {
         [safeSortBy]: sortOrder,
       },
     }),
-
-    prisma.user.count({
-      where,
-    }),
+    prisma.user.count({ where }),
   ]);
 
-  return {
+  const result = {
     data: users,
-
     meta: {
       page,
       limit,
@@ -100,6 +104,10 @@ const getAllUsers = async (query?: IUserQueryParams) => {
       totalPages: Math.ceil(total / limit),
     },
   };
+
+  await setCache(cacheKey, result, 300);
+
+  return result;
 };
 
 const getSingleUser = async (id: string) => {
@@ -108,7 +116,6 @@ const getSingleUser = async (id: string) => {
       id,
       deletedAt: null,
     },
-
     select: {
       id: true,
       name: true,
@@ -123,7 +130,6 @@ const getSingleUser = async (id: string) => {
       areaId: true,
       createdAt: true,
       updatedAt: true,
-
       area: {
         select: {
           id: true,
@@ -171,14 +177,10 @@ const updateUserStatus = async (
 
   const result = await prisma.$transaction(async (tx) => {
     const updatedUser = await tx.user.update({
-      where: {
-        id,
-      },
-
+      where: { id },
       data: {
         status: payload.status,
       },
-
       select: {
         id: true,
         name: true,
@@ -207,6 +209,8 @@ const updateUserStatus = async (
     return updatedUser;
   });
 
+  await invalidateUserCaches();
+
   return result;
 };
 
@@ -233,24 +237,15 @@ const updateUser = async (
     );
   }
 
-  if (payload.role === "ADMIN" && user.role !== "ADMIN") {
-    // Admin role assignment is allowed here.
-    // You can restrict this later if your business rules require it.
-  }
-
   const updatedUser = await prisma.$transaction(async (tx) => {
     const result = await tx.user.update({
-      where: {
-        id,
-      },
-
+      where: { id },
       data: {
         name: payload.name,
         phone: payload.phone,
         gender: payload.gender,
         role: payload.role,
       },
-
       select: {
         id: true,
         name: true,
@@ -291,6 +286,8 @@ const updateUser = async (
     return result;
   });
 
+  await invalidateUserCaches();
+
   return updatedUser;
 };
 
@@ -312,15 +309,11 @@ const deleteUser = async (id: string, actorId: string) => {
 
   const deletedUser = await prisma.$transaction(async (tx) => {
     const result = await tx.user.update({
-      where: {
-        id,
-      },
-
+      where: { id },
       data: {
         status: "DELETED",
         deletedAt: new Date(),
       },
-
       select: {
         id: true,
         name: true,
@@ -350,6 +343,8 @@ const deleteUser = async (id: string, actorId: string) => {
 
     return result;
   });
+
+  await invalidateUserCaches();
 
   return deletedUser;
 };

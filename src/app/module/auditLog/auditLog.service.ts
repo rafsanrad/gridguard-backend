@@ -24,8 +24,8 @@ const createAuditLog = async (payload: ICreateAuditLogPayload) => {
 };
 
 const getAllAuditLogs = async (query?: IQueryParams) => {
-  const page = query?.page ?? 1;
-  const limit = query?.limit ?? 10;
+  const page = Math.max(1, query?.page ?? 1);
+  const limit = Math.max(1, Math.min(query?.limit ?? 10, 100));
   const skip = (page - 1) * limit;
 
   const search = query?.search ?? "";

@@ -16,14 +16,18 @@ const createNotification = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getAllNotifications = catchAsync(async (req: Request, res: Response) => {
-  const result = await NotificationService.getAllNotifications(req.validatedQuery);
+  const result = await NotificationService.getAllNotifications(
+    req.validatedQuery,
+    req.user?.userId,
+    req.user?.role,
+  );
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
     message: "Notifications fetched successfully",
     data: result.data,
-    meta: result.meta
+    meta: result.meta,
   });
 });
 

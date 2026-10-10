@@ -31,16 +31,20 @@ const createNotification = async (payload: ICreateNotificationPayload) => {
   return notification;
 };
 
-const getAllNotifications = async (query?: IQueryParams) => {
-  const page = query?.page ?? 1;
-  const limit = query?.limit ?? 10;
+const getAllNotifications = async (
+  query?: IQueryParams,
+  userId?: string,
+  userRole?: string,
+) => {
+  const page = Math.max(1, query?.page ?? 1);
+  const limit = Math.max(1, Math.min(query?.limit ?? 10, 100));
   const skip = (page - 1) * limit;
 
   const search = query?.search ?? "";
   const sortBy = query?.sortBy ?? "";
   const sortOrder = query?.sortOrder ?? "desc";
 
-  const cacheKey = `notifications:${page}:${limit}:${search}:${sortBy}:${sortOrder}`;
+  const cacheKey = `notifications:${userRole ?? "UNKNOWN"}:${userId ?? "ALL"}:${page}:${limit}:${search}:${sortBy}:${sortOrder}`;
 
   const cachedData = await getCache(cacheKey);
 
@@ -58,6 +62,7 @@ const getAllNotifications = async (query?: IQueryParams) => {
     user: {
       deletedAt: null,
     },
+    ...(userRole === "CUSTOMER" && userId ? { userId } : {}),
     ...(search
       ? {
           OR: [

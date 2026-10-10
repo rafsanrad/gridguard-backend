@@ -12,6 +12,7 @@ const invalidatePaymentCaches = async () => {
   await Promise.all([
     deleteCacheByPrefix("payments"),
     deleteCacheByPrefix("serviceRequests"),
+    deleteCacheByPrefix("auditLogs"),
     AnalyticsService.invalidateDashboardCache(),
   ]);
 };
@@ -21,9 +22,7 @@ const createPayment = async (
   customerId: string,
 ) => {
   const serviceRequest = await prisma.serviceRequest.findUnique({
-    where: {
-      id: payload.serviceRequestId,
-    },
+    where: { id: payload.serviceRequestId },
   });
 
   if (!serviceRequest) {
@@ -117,9 +116,7 @@ const createPayment = async (
 
 const executePayment = async (paymentID: string) => {
   const payment = await prisma.payment.findFirst({
-    where: {
-      providerPaymentId: paymentID,
-    },
+    where: { providerPaymentId: paymentID },
   });
 
   if (!payment) {
@@ -142,9 +139,7 @@ const executePayment = async (paymentID: string) => {
         Authorization: bkashIdToken,
         "X-APP-Key": config.bkash_app_key,
       },
-      body: JSON.stringify({
-        paymentID,
-      }),
+      body: JSON.stringify({ paymentID }),
     },
   );
 
@@ -152,9 +147,7 @@ const executePayment = async (paymentID: string) => {
 
   if (!response.ok || bkashResponse.statusCode !== "0000") {
     await prisma.payment.update({
-      where: {
-        id: payment.id,
-      },
+      where: { id: payment.id },
       data: {
         status: "FAILED",
         failureReason:
@@ -172,9 +165,7 @@ const executePayment = async (paymentID: string) => {
 
   const result = await prisma.$transaction(async (tx) => {
     const updatedPayment = await tx.payment.update({
-      where: {
-        id: payment.id,
-      },
+      where: { id: payment.id },
       data: {
         status: "SUCCESS",
         transactionId: bkashResponse.trxID,
@@ -182,13 +173,9 @@ const executePayment = async (paymentID: string) => {
       },
     });
 
-    await tx.serviceRequest.update({
-      where: {
-        id: payment.serviceRequestId,
-      },
-      data: {
-        status: "APPROVED",
-      },
+    const updatedServiceRequest = await tx.serviceRequest.update({
+      where: { id: payment.serviceRequestId },
+      data: { status: "APPROVED" },
     });
 
     await tx.auditLog.create({
@@ -196,13 +183,22 @@ const executePayment = async (paymentID: string) => {
         action: "PAYMENT",
         entity: "Payment",
         entityId: payment.id,
-        oldValues: {
-          status: "PENDING",
-        },
+        oldValues: { status: "PENDING" },
         newValues: {
           status: "SUCCESS",
           transactionId: bkashResponse.trxID,
         },
+        actorId: payment.customerId,
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        action: "STATUS_CHANGE",
+        entity: "ServiceRequest",
+        entityId: payment.serviceRequestId,
+        oldValues: { status: "PENDING" },
+        newValues: { status: updatedServiceRequest.status },
         actorId: payment.customerId,
       },
     });
@@ -225,7 +221,6 @@ const getAllPayments = async (query?: IQueryParams) => {
   const sortOrder = query?.sortOrder ?? "desc";
 
   const cacheKey = `payments:${page}:${limit}:${search}:${sortBy}:${sortOrder}`;
-
   const cachedData = await getCache(cacheKey);
 
   if (cachedData) {
@@ -315,13 +310,9 @@ const getAllPayments = async (query?: IQueryParams) => {
           },
         },
       },
-      orderBy: {
-        [safeSortBy]: sortOrder,
-      },
+      orderBy: { [safeSortBy]: sortOrder },
     }),
-    prisma.payment.count({
-      where,
-    }),
+    prisma.payment.count({ where }),
   ]);
 
   const result = {
@@ -345,9 +336,7 @@ const getSinglePayment = async (
   userRole?: string,
 ) => {
   const payment = await prisma.payment.findUnique({
-    where: {
-      id,
-    },
+    where: { id },
     include: {
       customer: {
         select: {

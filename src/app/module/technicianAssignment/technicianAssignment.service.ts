@@ -4,6 +4,7 @@ import { AppError } from "../../utils/AppError";
 import { getSafeSortField } from "../../utils/query";
 import { deleteCacheByPrefix, getCache, setCache } from "../../utils/cache";
 import { ICreateTechnicianAssignmentPayload } from "./technicianAssignment.interface";
+import { AnalyticsService } from "../analytics/analytics.service";
 
 const createTechnicianAssignment = async (
   payload: ICreateTechnicianAssignmentPayload,
@@ -94,6 +95,8 @@ const createTechnicianAssignment = async (
     deleteCacheByPrefix("technicianAssignments"),
     deleteCacheByPrefix("technicians"),
     deleteCacheByPrefix("outages"),
+    deleteCacheByPrefix("auditLogs"),
+    AnalyticsService.invalidateDashboardCache(),
   ]);
 
   return result;
