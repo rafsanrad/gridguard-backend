@@ -2,6 +2,7 @@ import { IQueryParams } from "../../interfaces/common";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/AppError";
 import { getSafeSortField } from "../../utils/query";
+import { deleteCacheByPrefix, getCache, setCache } from "../../utils/cache";
 import { ICreateTechnicianAssignmentPayload } from "./technicianAssignment.interface";
 
 const createTechnicianAssignment = async (
@@ -9,12 +10,10 @@ const createTechnicianAssignment = async (
   assignedById: string,
 ) => {
   const outage = await prisma.outage.findUnique({
-    where: {
-      id: payload.outageId,
-    },
+    where: { id: payload.outageId },
   });
 
-  if (!outage) {
+  if (!outage || outage.deletedAt) {
     throw new AppError(404, "Outage not found");
   }
 
@@ -26,9 +25,7 @@ const createTechnicianAssignment = async (
   }
 
   const technician = await prisma.technician.findUnique({
-    where: {
-      id: payload.technicianId,
-    },
+    where: { id: payload.technicianId },
   });
 
   if (!technician) {
@@ -44,12 +41,10 @@ const createTechnicianAssignment = async (
   }
 
   const assignedBy = await prisma.user.findUnique({
-    where: {
-      id: assignedById,
-    },
+    where: { id: assignedById },
   });
 
-  if (!assignedBy) {
+  if (!assignedBy || assignedBy.deletedAt) {
     throw new AppError(404, "Assigning user not found");
   }
 
@@ -58,27 +53,19 @@ const createTechnicianAssignment = async (
       data: {
         outageId: payload.outageId,
         technicianId: payload.technicianId,
-        assignedById: assignedById,
+        assignedById,
         notes: payload.notes,
       },
     });
 
     await tx.technician.update({
-      where: {
-        id: payload.technicianId,
-      },
-      data: {
-        status: "ASSIGNED",
-      },
+      where: { id: payload.technicianId },
+      data: { status: "ASSIGNED" },
     });
 
     await tx.outage.update({
-      where: {
-        id: payload.outageId,
-      },
-      data: {
-        status: "ASSIGNED",
-      },
+      where: { id: payload.outageId },
+      data: { status: "ASSIGNED" },
     });
 
     await tx.auditLog.create({
@@ -86,25 +73,28 @@ const createTechnicianAssignment = async (
         action: "ASSIGN",
         entity: "TechnicianAssignment",
         entityId: assignment.id,
-
         oldValues: {
           technicianStatus: "AVAILABLE",
           outageStatus: outage.status,
         },
-
         newValues: {
           technicianStatus: "ASSIGNED",
           outageStatus: "ASSIGNED",
           technicianId: technician.id,
           outageId: outage.id,
         },
-
         actorId: assignedById,
       },
     });
 
     return assignment;
   });
+
+  await Promise.all([
+    deleteCacheByPrefix("technicianAssignments"),
+    deleteCacheByPrefix("technicians"),
+    deleteCacheByPrefix("outages"),
+  ]);
 
   return result;
 };
@@ -114,9 +104,17 @@ const getAllTechnicianAssignments = async (query?: IQueryParams) => {
   const limit = query?.limit ?? 10;
   const skip = (page - 1) * limit;
 
-  const search = query?.search;
-  const sortBy = query?.sortBy;
+  const search = query?.search ?? "";
+  const sortBy = query?.sortBy ?? "";
   const sortOrder = query?.sortOrder ?? "desc";
+
+  const cacheKey = `technicianAssignments:${page}:${limit}:${search}:${sortBy}:${sortOrder}`;
+
+  const cachedData = await getCache(cacheKey);
+
+  if (cachedData) {
+    return cachedData;
+  }
 
   const safeSortBy = getSafeSortField(
     sortBy,
@@ -160,12 +158,9 @@ const getAllTechnicianAssignments = async (query?: IQueryParams) => {
       where,
       skip,
       take: limit,
-
       include: {
         outage: true,
-
         technician: true,
-
         assignedBy: {
           select: {
             id: true,
@@ -174,20 +169,15 @@ const getAllTechnicianAssignments = async (query?: IQueryParams) => {
           },
         },
       },
-
       orderBy: {
         [safeSortBy]: sortOrder,
       },
     }),
-
-    prisma.technicianAssignment.count({
-      where,
-    }),
+    prisma.technicianAssignment.count({ where }),
   ]);
 
-  return {
+  const result = {
     data: assignments,
-
     meta: {
       page,
       limit,
@@ -195,13 +185,15 @@ const getAllTechnicianAssignments = async (query?: IQueryParams) => {
       totalPages: Math.ceil(total / limit),
     },
   };
+
+  await setCache(cacheKey, result, 300);
+
+  return result;
 };
 
 const getSingleTechnicianAssignment = async (id: string) => {
   const assignment = await prisma.technicianAssignment.findUnique({
-    where: {
-      id,
-    },
+    where: { id },
     include: {
       outage: true,
       technician: true,

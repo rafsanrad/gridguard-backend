@@ -2,6 +2,7 @@ import { IQueryParams } from "../../interfaces/common";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/AppError";
 import { getSafeSortField } from "../../utils/query";
+import { deleteCacheByPrefix, getCache, setCache } from "../../utils/cache";
 import {
   ICreateTechnicianPayload,
   IUpdateTechnicianPayload,
@@ -22,6 +23,8 @@ const createTechnician = async (payload: ICreateTechnicianPayload) => {
     data: payload,
   });
 
+  await deleteCacheByPrefix("technicians");
+
   return technician;
 };
 
@@ -30,9 +33,17 @@ const getAllTechnicians = async (query?: IQueryParams) => {
   const limit = query?.limit ?? 10;
   const skip = (page - 1) * limit;
 
-  const search = query?.search;
-  const sortBy = query?.sortBy;
+  const search = query?.search ?? "";
+  const sortBy = query?.sortBy ?? "";
   const sortOrder = query?.sortOrder ?? "desc";
+
+  const cacheKey = `technicians:${page}:${limit}:${search}:${sortBy}:${sortOrder}`;
+
+  const cachedData = await getCache(cacheKey);
+
+  if (cachedData) {
+    return cachedData;
+  }
 
   const safeSortBy = getSafeSortField(
     sortBy,
@@ -50,7 +61,6 @@ const getAllTechnicians = async (query?: IQueryParams) => {
 
   const where = {
     isActive: true,
-
     ...(search
       ? {
           OR: [
@@ -88,20 +98,17 @@ const getAllTechnicians = async (query?: IQueryParams) => {
       where,
       skip,
       take: limit,
-
       orderBy: {
         [safeSortBy]: sortOrder,
       },
     }),
-
     prisma.technician.count({
       where,
     }),
   ]);
 
-  return {
+  const result = {
     data: technicians,
-
     meta: {
       page,
       limit,
@@ -109,6 +116,10 @@ const getAllTechnicians = async (query?: IQueryParams) => {
       totalPages: Math.ceil(total / limit),
     },
   };
+
+  await setCache(cacheKey, result, 300);
+
+  return result;
 };
 
 const getSingleTechnician = async (id: string) => {
@@ -143,7 +154,6 @@ const updateTechnician = async (
     const duplicateTechnician = await prisma.technician.findFirst({
       where: {
         employeeId: payload.employeeId,
-
         NOT: {
           id,
         },
@@ -159,9 +169,10 @@ const updateTechnician = async (
     where: {
       id,
     },
-
     data: payload,
   });
+
+  await deleteCacheByPrefix("technicians");
 
   return updatedTechnician;
 };
@@ -181,11 +192,12 @@ const deleteTechnician = async (id: string) => {
     where: {
       id,
     },
-
     data: {
       isActive: false,
     },
   });
+
+  await deleteCacheByPrefix("technicians");
 
   return deletedTechnician;
 };

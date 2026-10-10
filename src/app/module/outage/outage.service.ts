@@ -8,15 +8,14 @@ import {
 import { OutageStatus } from "../../../generated/prisma/enums";
 import { getSafeSortField } from "../../utils/query";
 import { IQueryParams } from "../../interfaces/common";
+import { deleteCacheByPrefix, getCache, setCache } from "../../utils/cache";
 
 const createOutage = async (
   payload: ICreateOutagePayload,
   reportedById: string,
 ) => {
   const feeder = await prisma.feeder.findUnique({
-    where: {
-      id: payload.feederId,
-    },
+    where: { id: payload.feederId },
   });
 
   if (!feeder) {
@@ -29,9 +28,7 @@ const createOutage = async (
 
   if (reportedById) {
     const reporter = await prisma.user.findUnique({
-      where: {
-        id: reportedById,
-      },
+      where: { id: reportedById },
     });
 
     if (!reporter) {
@@ -53,6 +50,8 @@ const createOutage = async (
     },
   });
 
+  await deleteCacheByPrefix("outages");
+
   return outage;
 };
 
@@ -61,9 +60,17 @@ const getAllOutages = async (query?: IQueryParams) => {
   const limit = query?.limit ?? 10;
   const skip = (page - 1) * limit;
 
-  const search = query?.search;
-  const sortBy = query?.sortBy;
+  const search = query?.search ?? "";
+  const sortBy = query?.sortBy ?? "";
   const sortOrder = query?.sortOrder ?? "desc";
+
+  const cacheKey = `outages:${page}:${limit}:${search}:${sortBy}:${sortOrder}`;
+
+  const cachedData = await getCache(cacheKey);
+
+  if (cachedData) {
+    return cachedData;
+  }
 
   const safeSortBy = getSafeSortField(
     sortBy,
@@ -81,7 +88,6 @@ const getAllOutages = async (query?: IQueryParams) => {
 
   const where = {
     deletedAt: null,
-
     ...(search
       ? {
           OR: [
@@ -113,7 +119,6 @@ const getAllOutages = async (query?: IQueryParams) => {
       where,
       skip,
       take: limit,
-
       include: {
         feeder: true,
         reportedBy: {
@@ -124,20 +129,15 @@ const getAllOutages = async (query?: IQueryParams) => {
           },
         },
       },
-
       orderBy: {
         [safeSortBy]: sortOrder,
       },
     }),
-
-    prisma.outage.count({
-      where,
-    }),
+    prisma.outage.count({ where }),
   ]);
 
-  return {
+  const result = {
     data: outages,
-
     meta: {
       page,
       limit,
@@ -145,6 +145,10 @@ const getAllOutages = async (query?: IQueryParams) => {
       totalPages: Math.ceil(total / limit),
     },
   };
+
+  await setCache(cacheKey, result, 300);
+
+  return result;
 };
 
 const getSingleOutage = async (id: string) => {
@@ -153,7 +157,6 @@ const getSingleOutage = async (id: string) => {
       id,
       deletedAt: null,
     },
-
     include: {
       feeder: true,
       reportedBy: {
@@ -199,12 +202,11 @@ const updateOutage = async (id: string, payload: IUpdateOutagePayload) => {
   }
 
   const updatedOutage = await prisma.outage.update({
-    where: {
-      id,
-    },
-
+    where: { id },
     data: payload,
   });
+
+  await deleteCacheByPrefix("outages");
 
   return updatedOutage;
 };
@@ -215,12 +217,10 @@ const updateOutageStatus = async (
   actorId: string,
 ) => {
   const outage = await prisma.outage.findUnique({
-    where: {
-      id,
-    },
+    where: { id },
   });
 
-  if (!outage) {
+  if (!outage || outage.deletedAt) {
     throw new AppError(404, "Outage not found");
   }
 
@@ -245,12 +245,9 @@ const updateOutageStatus = async (
 
   const result = await prisma.$transaction(async (tx) => {
     const updatedOutage = await tx.outage.update({
-      where: {
-        id,
-      },
+      where: { id },
       data: {
         status: payload.status,
-
         restoredAt:
           payload.status === "RESTORED" ? new Date() : outage.restoredAt,
       },
@@ -261,11 +258,9 @@ const updateOutageStatus = async (
         action: "STATUS_CHANGE",
         entity: "Outage",
         entityId: outage.id,
-
         oldValues: {
           status: outage.status,
         },
-
         newValues: {
           status: payload.status,
           notes: payload.notes,
@@ -276,6 +271,8 @@ const updateOutageStatus = async (
 
     return updatedOutage;
   });
+
+  await deleteCacheByPrefix("outages");
 
   return result;
 };
@@ -293,14 +290,13 @@ const deleteOutage = async (id: string) => {
   }
 
   const deletedOutage = await prisma.outage.update({
-    where: {
-      id,
-    },
-
+    where: { id },
     data: {
       deletedAt: new Date(),
     },
   });
+
+  await deleteCacheByPrefix("outages");
 
   return deletedOutage;
 };

@@ -1,13 +1,21 @@
+
 import { IQueryParams } from "../../interfaces/common";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/AppError";
 import { getSafeSortField } from "../../utils/query";
 import {
+  deleteCacheByPrefix,
+  getCache,
+  setCache,
+} from "../../utils/cache";
+import {
   ICreateSubstationPayload,
   IUpdateSubstationPayload,
 } from "./substation.interface";
 
-const createSubstation = async (payload: ICreateSubstationPayload) => {
+const createSubstation = async (
+  payload: ICreateSubstationPayload,
+) => {
   const zone = await prisma.zone.findUnique({
     where: {
       id: payload.zoneId,
@@ -19,17 +27,24 @@ const createSubstation = async (payload: ICreateSubstationPayload) => {
   }
 
   if (!zone.isActive) {
-    throw new AppError(400, "Cannot create substation under an inactive zone");
+    throw new AppError(
+      400,
+      "Cannot create substation under an inactive zone",
+    );
   }
 
-  const existingSubstation = await prisma.substation.findUnique({
-    where: {
-      code: payload.code,
-    },
-  });
+  const existingSubstation =
+    await prisma.substation.findUnique({
+      where: {
+        code: payload.code,
+      },
+    });
 
   if (existingSubstation) {
-    throw new AppError(409, "Substation code already exists");
+    throw new AppError(
+      409,
+      "Substation code already exists",
+    );
   }
 
   const substation = await prisma.substation.create({
@@ -42,17 +57,35 @@ const createSubstation = async (payload: ICreateSubstationPayload) => {
     },
   });
 
+  await deleteCacheByPrefix("substations");
+
   return substation;
 };
 
-const getAllSubstations = async (query?: IQueryParams) => {
+const getAllSubstations = async (
+  query?: IQueryParams,
+) => {
   const page = query?.page ?? 1;
   const limit = query?.limit ?? 10;
-  const skip = (page - 1) * limit;
-
-  const search = query?.search;
-  const sortBy = query?.sortBy;
+  const search = query?.search ?? "";
+  const sortBy = query?.sortBy ?? "createdAt";
   const sortOrder = query?.sortOrder ?? "desc";
+
+  const cacheKey =
+    `substations:${page}:${limit}:${search}:${sortBy}:${sortOrder}`;
+
+  const cachedData = await getCache(cacheKey);
+
+  if (cachedData) {
+    // console.log("REDIS CACHE HIT: Substations");
+    return cachedData;
+  }
+
+  // console.log(
+  //   "REDIS CACHE MISS: Fetching substations from PostgreSQL",
+  // );
+
+  const skip = (page - 1) * limit;
 
   const safeSortBy = getSafeSortField(
     sortBy,
@@ -89,27 +122,28 @@ const getAllSubstations = async (query?: IQueryParams) => {
       : {}),
   };
 
-  const [substations, total] = await prisma.$transaction([
-    prisma.substation.findMany({
-      where,
-      skip,
-      take: limit,
+  const [substations, total] =
+    await prisma.$transaction([
+      prisma.substation.findMany({
+        where,
+        skip,
+        take: limit,
 
-      include: {
-        zone: true,
-      },
+        include: {
+          zone: true,
+        },
 
-      orderBy: {
-        [safeSortBy]: sortOrder,
-      },
-    }),
+        orderBy: {
+          [safeSortBy]: sortOrder,
+        },
+      }),
 
-    prisma.substation.count({
-      where,
-    }),
-  ]);
+      prisma.substation.count({
+        where,
+      }),
+    ]);
 
-  return {
+  const result = {
     data: substations,
 
     meta: {
@@ -119,18 +153,27 @@ const getAllSubstations = async (query?: IQueryParams) => {
       totalPages: Math.ceil(total / limit),
     },
   };
+
+  await setCache(cacheKey, result, 300);
+
+  // console.log("REDIS CACHE SET: Substations");
+
+  return result;
 };
 
-const getSingleSubstation = async (id: string) => {
-  const substation = await prisma.substation.findUnique({
-    where: {
-      id,
-    },
+const getSingleSubstation = async (
+  id: string,
+) => {
+  const substation =
+    await prisma.substation.findUnique({
+      where: {
+        id,
+      },
 
-    include: {
-      zone: true,
-    },
-  });
+      include: {
+        zone: true,
+      },
+    });
 
   if (!substation) {
     throw new AppError(404, "Substation not found");
@@ -143,29 +186,34 @@ const updateSubstation = async (
   id: string,
   payload: IUpdateSubstationPayload,
 ) => {
-  const existingSubstation = await prisma.substation.findUnique({
-    where: {
-      id,
-    },
-  });
+  const existingSubstation =
+    await prisma.substation.findUnique({
+      where: {
+        id,
+      },
+    });
 
   if (!existingSubstation) {
     throw new AppError(404, "Substation not found");
   }
 
   if (payload.code) {
-    const duplicateSubstation = await prisma.substation.findFirst({
-      where: {
-        code: payload.code,
+    const duplicateSubstation =
+      await prisma.substation.findFirst({
+        where: {
+          code: payload.code,
 
-        NOT: {
-          id,
+          NOT: {
+            id,
+          },
         },
-      },
-    });
+      });
 
     if (duplicateSubstation) {
-      throw new AppError(409, "Substation code already exists");
+      throw new AppError(
+        409,
+        "Substation code already exists",
+      );
     }
   }
 
@@ -181,41 +229,53 @@ const updateSubstation = async (
     }
 
     if (!zone.isActive) {
-      throw new AppError(400, "Cannot move substation to an inactive zone");
+      throw new AppError(
+        400,
+        "Cannot move substation to an inactive zone",
+      );
     }
   }
 
-  const updatedSubstation = await prisma.substation.update({
-    where: {
-      id,
-    },
+  const updatedSubstation =
+    await prisma.substation.update({
+      where: {
+        id,
+      },
 
-    data: payload,
-  });
+      data: payload,
+    });
+
+  await deleteCacheByPrefix("substations");
 
   return updatedSubstation;
 };
 
-const deleteSubstation = async (id: string) => {
-  const existingSubstation = await prisma.substation.findUnique({
-    where: {
-      id,
-    },
-  });
+const deleteSubstation = async (
+  id: string,
+) => {
+  const existingSubstation =
+    await prisma.substation.findUnique({
+      where: {
+        id,
+      },
+    });
 
   if (!existingSubstation) {
     throw new AppError(404, "Substation not found");
   }
 
-  const deletedSubstation = await prisma.substation.update({
-    where: {
-      id,
-    },
+  const deletedSubstation =
+    await prisma.substation.update({
+      where: {
+        id,
+      },
 
-    data: {
-      isActive: false,
-    },
-  });
+      data: {
+        isActive: false,
+      },
+    });
+
+  await deleteCacheByPrefix("substations");
 
   return deletedSubstation;
 };

@@ -2,6 +2,7 @@ import { IQueryParams } from "../../interfaces/common";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/AppError";
 import { getSafeSortField } from "../../utils/query";
+import { deleteCacheByPrefix, getCache, setCache } from "../../utils/cache";
 import { ICreateNotificationPayload } from "./notification.interface";
 
 const createNotification = async (payload: ICreateNotificationPayload) => {
@@ -25,6 +26,8 @@ const createNotification = async (payload: ICreateNotificationPayload) => {
     },
   });
 
+  await deleteCacheByPrefix("notifications");
+
   return notification;
 };
 
@@ -33,9 +36,17 @@ const getAllNotifications = async (query?: IQueryParams) => {
   const limit = query?.limit ?? 10;
   const skip = (page - 1) * limit;
 
-  const search = query?.search;
-  const sortBy = query?.sortBy;
+  const search = query?.search ?? "";
+  const sortBy = query?.sortBy ?? "";
   const sortOrder = query?.sortOrder ?? "desc";
+
+  const cacheKey = `notifications:${page}:${limit}:${search}:${sortBy}:${sortOrder}`;
+
+  const cachedData = await getCache(cacheKey);
+
+  if (cachedData) {
+    return cachedData;
+  }
 
   const safeSortBy = getSafeSortField(
     sortBy,
@@ -47,7 +58,6 @@ const getAllNotifications = async (query?: IQueryParams) => {
     user: {
       deletedAt: null,
     },
-
     ...(search
       ? {
           OR: [
@@ -73,7 +83,6 @@ const getAllNotifications = async (query?: IQueryParams) => {
       where,
       skip,
       take: limit,
-
       include: {
         user: {
           select: {
@@ -83,20 +92,15 @@ const getAllNotifications = async (query?: IQueryParams) => {
           },
         },
       },
-
       orderBy: {
         [safeSortBy]: sortOrder,
       },
     }),
-
-    prisma.notification.count({
-      where,
-    }),
+    prisma.notification.count({ where }),
   ]);
 
-  return {
+  const result = {
     data: notifications,
-
     meta: {
       page,
       limit,
@@ -104,6 +108,10 @@ const getAllNotifications = async (query?: IQueryParams) => {
       totalPages: Math.ceil(total / limit),
     },
   };
+
+  await setCache(cacheKey, result, 300);
+
+  return result;
 };
 
 const getSingleNotification = async (
@@ -112,9 +120,7 @@ const getSingleNotification = async (
   userRole?: string,
 ) => {
   const notification = await prisma.notification.findUnique({
-    where: {
-      id,
-    },
+    where: { id },
     include: {
       user: {
         select: {
@@ -143,9 +149,7 @@ const markNotificationAsRead = async (
   userRole?: string,
 ) => {
   const notification = await prisma.notification.findUnique({
-    where: {
-      id,
-    },
+    where: { id },
   });
 
   if (!notification) {
@@ -160,15 +164,17 @@ const markNotificationAsRead = async (
     return notification;
   }
 
-  return await prisma.notification.update({
-    where: {
-      id,
-    },
+  const updatedNotification = await prisma.notification.update({
+    where: { id },
     data: {
       isRead: true,
       readAt: new Date(),
     },
   });
+
+  await deleteCacheByPrefix("notifications");
+
+  return updatedNotification;
 };
 
 export const NotificationService = {

@@ -2,6 +2,7 @@ import { IQueryParams } from "../../interfaces/common";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/AppError";
 import { getSafeSortField } from "../../utils/query";
+import { deleteCacheByPrefix, getCache, setCache } from "../../utils/cache";
 import {
   ICreateLoadSheddingPayload,
   IUpdateLoadSheddingPayload,
@@ -12,9 +13,7 @@ const createLoadShedding = async (
   createdById: string,
 ) => {
   const feeder = await prisma.feeder.findUnique({
-    where: {
-      id: payload.feederId,
-    },
+    where: { id: payload.feederId },
   });
 
   if (!feeder) {
@@ -26,29 +25,19 @@ const createLoadShedding = async (
   }
 
   const creator = await prisma.user.findUnique({
-    where: {
-      id: createdById,
-    },
+    where: { id: createdById },
   });
 
   if (!creator) {
     throw new AppError(404, "Creator not found");
   }
 
-  // Check whether another schedule overlaps
-  // with the requested time on the same feeder.
   const conflictingSchedule = await prisma.loadSheddingSchedule.findFirst({
     where: {
       feederId: payload.feederId,
-      status: {
-        not: "CANCELLED",
-      },
-      startDateTime: {
-        lt: payload.endDateTime,
-      },
-      endDateTime: {
-        gt: payload.startDateTime,
-      },
+      status: { not: "CANCELLED" },
+      startDateTime: { lt: payload.endDateTime },
+      endDateTime: { gt: payload.startDateTime },
     },
   });
 
@@ -71,6 +60,8 @@ const createLoadShedding = async (
     },
   });
 
+  await deleteCacheByPrefix("loadShedding");
+
   return schedule;
 };
 
@@ -79,9 +70,17 @@ const getAllLoadShedding = async (query?: IQueryParams) => {
   const limit = query?.limit ?? 10;
   const skip = (page - 1) * limit;
 
-  const search = query?.search;
-  const sortBy = query?.sortBy;
+  const search = query?.search ?? "";
+  const sortBy = query?.sortBy ?? "";
   const sortOrder = query?.sortOrder ?? "desc";
+
+  const cacheKey = `loadShedding:${page}:${limit}:${search}:${sortBy}:${sortOrder}`;
+
+  const cachedData = await getCache(cacheKey);
+
+  if (cachedData) {
+    return cachedData;
+  }
 
   const safeSortBy = getSafeSortField(
     sortBy,
@@ -128,7 +127,6 @@ const getAllLoadShedding = async (query?: IQueryParams) => {
       where,
       skip,
       take: limit,
-
       include: {
         feeder: true,
         createdBy: {
@@ -140,20 +138,15 @@ const getAllLoadShedding = async (query?: IQueryParams) => {
           },
         },
       },
-
       orderBy: {
         [safeSortBy]: sortOrder,
       },
     }),
-
-    prisma.loadSheddingSchedule.count({
-      where,
-    }),
+    prisma.loadSheddingSchedule.count({ where }),
   ]);
 
-  return {
+  const result = {
     data: schedules,
-
     meta: {
       page,
       limit,
@@ -161,14 +154,15 @@ const getAllLoadShedding = async (query?: IQueryParams) => {
       totalPages: Math.ceil(total / limit),
     },
   };
+
+  await setCache(cacheKey, result, 300);
+
+  return result;
 };
 
 const getSingleLoadShedding = async (id: string) => {
   const schedule = await prisma.loadSheddingSchedule.findUnique({
-    where: {
-      id,
-    },
-
+    where: { id },
     include: {
       feeder: true,
       createdBy: {
@@ -194,9 +188,7 @@ const updateLoadShedding = async (
   payload: IUpdateLoadSheddingPayload,
 ) => {
   const existingSchedule = await prisma.loadSheddingSchedule.findUnique({
-    where: {
-      id,
-    },
+    where: { id },
   });
 
   if (!existingSchedule) {
@@ -217,23 +209,11 @@ const updateLoadShedding = async (
   if (payload.startDateTime || payload.endDateTime) {
     const conflictingSchedule = await prisma.loadSheddingSchedule.findFirst({
       where: {
-        id: {
-          not: id,
-        },
-
+        id: { not: id },
         feederId: existingSchedule.feederId,
-
-        status: {
-          not: "CANCELLED",
-        },
-
-        startDateTime: {
-          lt: endDateTime,
-        },
-
-        endDateTime: {
-          gt: startDateTime,
-        },
+        status: { not: "CANCELLED" },
+        startDateTime: { lt: endDateTime },
+        endDateTime: { gt: startDateTime },
       },
     });
 
@@ -246,21 +226,18 @@ const updateLoadShedding = async (
   }
 
   const updatedSchedule = await prisma.loadSheddingSchedule.update({
-    where: {
-      id,
-    },
-
+    where: { id },
     data: payload,
   });
+
+  await deleteCacheByPrefix("loadShedding");
 
   return updatedSchedule;
 };
 
 const deleteLoadShedding = async (id: string) => {
   const existingSchedule = await prisma.loadSheddingSchedule.findUnique({
-    where: {
-      id,
-    },
+    where: { id },
   });
 
   if (!existingSchedule) {
@@ -268,14 +245,11 @@ const deleteLoadShedding = async (id: string) => {
   }
 
   const deletedSchedule = await prisma.loadSheddingSchedule.update({
-    where: {
-      id,
-    },
-
-    data: {
-      status: "CANCELLED",
-    },
+    where: { id },
+    data: { status: "CANCELLED" },
   });
+
+  await deleteCacheByPrefix("loadShedding");
 
   return deletedSchedule;
 };

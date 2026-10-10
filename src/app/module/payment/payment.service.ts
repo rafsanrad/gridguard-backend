@@ -5,6 +5,14 @@ import config from "../../config";
 import { ICreatePaymentPayload } from "./payment.interface";
 import { getSafeSortField } from "../../utils/query";
 import { IQueryParams } from "../../interfaces/common";
+import { deleteCacheByPrefix, getCache, setCache } from "../../utils/cache";
+
+const invalidatePaymentCaches = async () => {
+  await Promise.all([
+    deleteCacheByPrefix("payments"),
+    deleteCacheByPrefix("serviceRequests"),
+  ]);
+};
 
 const createPayment = async (
   payload: ICreatePaymentPayload,
@@ -49,22 +57,18 @@ const createPayment = async (
   }
 
   const merchantInvoiceNumber = `GRIDGUARD-${Date.now()}`;
-
-  // Get bKash ID token from Redis/cache.
   const bkashIdToken = await getBkashIdToken();
 
   const response = await fetch(
     `${config.bkash_base_url}/tokenized/checkout/create`,
     {
       method: "POST",
-
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
         Authorization: bkashIdToken,
         "X-APP-Key": config.bkash_app_key,
       },
-
       body: JSON.stringify({
         mode: "0011",
         payerReference: customerId,
@@ -95,10 +99,12 @@ const createPayment = async (
       status: "PENDING",
       providerPaymentId: bkashResponse.paymentID,
       checkoutUrl: bkashResponse.bkashURL,
-      customerId: customerId,
+      customerId,
       serviceRequestId: payload.serviceRequestId,
     },
   });
+
+  await invalidatePaymentCaches();
 
   return {
     payment,
@@ -128,14 +134,12 @@ const executePayment = async (paymentID: string) => {
     `${config.bkash_base_url}/tokenized/checkout/execute`,
     {
       method: "POST",
-
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
         Authorization: bkashIdToken,
         "X-APP-Key": config.bkash_app_key,
       },
-
       body: JSON.stringify({
         paymentID,
       }),
@@ -155,6 +159,8 @@ const executePayment = async (paymentID: string) => {
           bkashResponse.statusMessage || "bKash payment execution failed",
       },
     });
+
+    await deleteCacheByPrefix("payments");
 
     throw new AppError(
       400,
@@ -188,22 +194,21 @@ const executePayment = async (paymentID: string) => {
         action: "PAYMENT",
         entity: "Payment",
         entityId: payment.id,
-
         oldValues: {
           status: "PENDING",
         },
-
         newValues: {
           status: "SUCCESS",
           transactionId: bkashResponse.trxID,
         },
-
         actorId: payment.customerId,
       },
     });
 
     return updatedPayment;
   });
+
+  await invalidatePaymentCaches();
 
   return result;
 };
@@ -213,9 +218,17 @@ const getAllPayments = async (query?: IQueryParams) => {
   const limit = query?.limit ?? 10;
   const skip = (page - 1) * limit;
 
-  const search = query?.search;
-  const sortBy = query?.sortBy;
+  const search = query?.search ?? "";
+  const sortBy = query?.sortBy ?? "";
   const sortOrder = query?.sortOrder ?? "desc";
+
+  const cacheKey = `payments:${page}:${limit}:${search}:${sortBy}:${sortOrder}`;
+
+  const cachedData = await getCache(cacheKey);
+
+  if (cachedData) {
+    return cachedData;
+  }
 
   const safeSortBy = getSafeSortField(
     sortBy,
@@ -283,7 +296,6 @@ const getAllPayments = async (query?: IQueryParams) => {
       where,
       skip,
       take: limit,
-
       include: {
         customer: {
           select: {
@@ -292,7 +304,6 @@ const getAllPayments = async (query?: IQueryParams) => {
             email: true,
           },
         },
-
         serviceRequest: {
           select: {
             id: true,
@@ -302,20 +313,17 @@ const getAllPayments = async (query?: IQueryParams) => {
           },
         },
       },
-
       orderBy: {
         [safeSortBy]: sortOrder,
       },
     }),
-
     prisma.payment.count({
       where,
     }),
   ]);
 
-  return {
+  const result = {
     data: payments,
-
     meta: {
       page,
       limit,
@@ -323,6 +331,10 @@ const getAllPayments = async (query?: IQueryParams) => {
       totalPages: Math.ceil(total / limit),
     },
   };
+
+  await setCache(cacheKey, result, 300);
+
+  return result;
 };
 
 const getSinglePayment = async (

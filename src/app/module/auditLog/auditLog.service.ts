@@ -1,10 +1,11 @@
 import { IQueryParams } from "../../interfaces/common";
 import { prisma } from "../../lib/prisma";
 import { getSafeSortField } from "../../utils/query";
+import { deleteCacheByPrefix, getCache, setCache } from "../../utils/cache";
 import { ICreateAuditLogPayload } from "./auditLog.interface";
 
 const createAuditLog = async (payload: ICreateAuditLogPayload) => {
-  return await prisma.auditLog.create({
+  const auditLog = await prisma.auditLog.create({
     data: {
       action: payload.action,
       entity: payload.entity,
@@ -16,6 +17,10 @@ const createAuditLog = async (payload: ICreateAuditLogPayload) => {
       actorId: payload.actorId,
     },
   });
+
+  await deleteCacheByPrefix("auditLogs");
+
+  return auditLog;
 };
 
 const getAllAuditLogs = async (query?: IQueryParams) => {
@@ -23,9 +28,17 @@ const getAllAuditLogs = async (query?: IQueryParams) => {
   const limit = query?.limit ?? 10;
   const skip = (page - 1) * limit;
 
-  const search = query?.search;
-  const sortBy = query?.sortBy;
+  const search = query?.search ?? "";
+  const sortBy = query?.sortBy ?? "";
   const sortOrder = query?.sortOrder ?? "desc";
+
+  const cacheKey = `auditLogs:${page}:${limit}:${search}:${sortBy}:${sortOrder}`;
+
+  const cachedData = await getCache(cacheKey);
+
+  if (cachedData) {
+    return cachedData;
+  }
 
   const safeSortBy = getSafeSortField(
     sortBy,
@@ -75,7 +88,6 @@ const getAllAuditLogs = async (query?: IQueryParams) => {
       where,
       skip,
       take: limit,
-
       include: {
         actor: {
           select: {
@@ -86,20 +98,15 @@ const getAllAuditLogs = async (query?: IQueryParams) => {
           },
         },
       },
-
       orderBy: {
         [safeSortBy]: sortOrder,
       },
     }),
-
-    prisma.auditLog.count({
-      where,
-    }),
+    prisma.auditLog.count({ where }),
   ]);
 
-  return {
+  const result = {
     data: logs,
-
     meta: {
       page,
       limit,
@@ -107,6 +114,10 @@ const getAllAuditLogs = async (query?: IQueryParams) => {
       totalPages: Math.ceil(total / limit),
     },
   };
+
+  await setCache(cacheKey, result, 300);
+
+  return result;
 };
 
 export const AuditLogService = {

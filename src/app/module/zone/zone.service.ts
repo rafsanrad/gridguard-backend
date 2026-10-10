@@ -5,6 +5,7 @@ import { ICreateZonePayload, IUpdateZonePayload } from "./zone.interface";
 import { AppError } from "../../utils/AppError";
 import { IQueryParams } from "../../interfaces/common";
 import { getSafeSortField } from "../../utils/query";
+import { deleteCacheByPrefix, getCache, setCache } from "../../utils/cache";
 
 const createZone = async (payload: ICreateZonePayload) => {
   const existingZone = await prisma.zone.findUnique({
@@ -25,17 +26,27 @@ const createZone = async (payload: ICreateZonePayload) => {
     },
   });
 
+  await deleteCacheByPrefix("zones");
+
   return zone;
 };
 
 const getAllZones = async (query?: IQueryParams) => {
   const page = query?.page ?? 1;
   const limit = query?.limit ?? 10;
-  const skip = (page - 1) * limit;
-
-  const search = query?.search;
+  const search = query?.search ?? "";
   const sortBy = query?.sortBy ?? "createdAt";
   const sortOrder = query?.sortOrder ?? "desc";
+
+  const cacheKey = `zones:${page}:${limit}:${search}:${sortBy}:${sortOrder}`;
+
+  const cachedData = await getCache(cacheKey);
+
+  if (cachedData) {
+    return cachedData;
+  }
+
+  const skip = (page - 1) * limit;
 
   const safeSortBy = getSafeSortField(
     sortBy,
@@ -75,6 +86,7 @@ const getAllZones = async (query?: IQueryParams) => {
       where,
       skip,
       take: limit,
+
       orderBy: {
         [safeSortBy]: sortOrder,
       },
@@ -85,8 +97,9 @@ const getAllZones = async (query?: IQueryParams) => {
     }),
   ]);
 
-  return {
+  const result = {
     data: zones,
+
     meta: {
       page,
       limit,
@@ -94,6 +107,10 @@ const getAllZones = async (query?: IQueryParams) => {
       totalPages: Math.ceil(total / limit),
     },
   };
+
+  await setCache(cacheKey, result, 300);
+
+  return result;
 };
 
 const getSingleZone = async (id: string) => {
@@ -125,6 +142,7 @@ const updateZone = async (id: string, payload: IUpdateZonePayload) => {
     const duplicateZone = await prisma.zone.findFirst({
       where: {
         code: payload.code,
+
         NOT: {
           id,
         },
@@ -144,6 +162,8 @@ const updateZone = async (id: string, payload: IUpdateZonePayload) => {
     data: payload,
   });
 
+  await deleteCacheByPrefix("zones");
+
   return updatedZone;
 };
 
@@ -162,10 +182,13 @@ const deleteZone = async (id: string) => {
     where: {
       id,
     },
+
     data: {
       isActive: false,
     },
   });
+
+  await deleteCacheByPrefix("zones");
 
   return deletedZone;
 };

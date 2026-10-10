@@ -2,13 +2,13 @@ import { IQueryParams } from "../../interfaces/common";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/AppError";
 import { getSafeSortField } from "../../utils/query";
+import { deleteCacheByPrefix, getCache, setCache } from "../../utils/cache";
 import { ICreateOutageReportPayload } from "./outageReport.interface";
 
 const createOutageReport = async (
   payload: ICreateOutageReportPayload,
   customerId: string,
 ) => {
-  // Check whether the customer exists
   const customer = await prisma.user.findFirst({
     where: {
       id: customerId,
@@ -20,12 +20,10 @@ const createOutageReport = async (
     throw new AppError(404, "Customer not found");
   }
 
-  // Checked whether the user is actually a customer
   if (customer.role !== "CUSTOMER") {
     throw new AppError(403, "Only customers can report outages");
   }
 
-  // If an outage ID is provided, verify the outage exists
   if (payload.outageId) {
     const outage = await prisma.outage.findFirst({
       where: {
@@ -37,14 +35,10 @@ const createOutageReport = async (
     if (!outage) {
       throw new AppError(404, "Outage not found");
     }
-  }
 
-  // Prevent duplicate reports from the same customer
-  // for the same outage
-  if (payload.outageId) {
     const existingReport = await prisma.outageReport.findFirst({
       where: {
-        customerId: customerId,
+        customerId,
         outageId: payload.outageId,
       },
     });
@@ -54,15 +48,13 @@ const createOutageReport = async (
     }
   }
 
-  // Create the outage report
   const report = await prisma.outageReport.create({
     data: {
       description: payload.description,
       location: payload.location,
-      customerId: customerId,
+      customerId,
       outageId: payload.outageId,
     },
-
     include: {
       customer: {
         select: {
@@ -72,10 +64,11 @@ const createOutageReport = async (
           phone: true,
         },
       },
-
       outage: true,
     },
   });
+
+  await deleteCacheByPrefix("outageReports");
 
   return report;
 };
@@ -85,9 +78,17 @@ const getAllOutageReports = async (query?: IQueryParams) => {
   const limit = query?.limit ?? 10;
   const skip = (page - 1) * limit;
 
-  const search = query?.search;
-  const sortBy = query?.sortBy;
+  const search = query?.search ?? "";
+  const sortBy = query?.sortBy ?? "";
   const sortOrder = query?.sortOrder ?? "desc";
+
+  const cacheKey = `outageReports:${page}:${limit}:${search}:${sortBy}:${sortOrder}`;
+
+  const cachedData = await getCache(cacheKey);
+
+  if (cachedData) {
+    return cachedData;
+  }
 
   const safeSortBy = getSafeSortField(
     sortBy,
@@ -121,7 +122,6 @@ const getAllOutageReports = async (query?: IQueryParams) => {
       where,
       skip,
       take: limit,
-
       include: {
         customer: {
           select: {
@@ -131,23 +131,17 @@ const getAllOutageReports = async (query?: IQueryParams) => {
             phone: true,
           },
         },
-
         outage: true,
       },
-
       orderBy: {
         [safeSortBy]: sortOrder,
       },
     }),
-
-    prisma.outageReport.count({
-      where,
-    }),
+    prisma.outageReport.count({ where }),
   ]);
 
-  return {
+  const result = {
     data: reports,
-
     meta: {
       page,
       limit,
@@ -155,6 +149,10 @@ const getAllOutageReports = async (query?: IQueryParams) => {
       totalPages: Math.ceil(total / limit),
     },
   };
+
+  await setCache(cacheKey, result, 300);
+
+  return result;
 };
 
 const getSingleOutageReport = async (
@@ -163,9 +161,7 @@ const getSingleOutageReport = async (
   userRole?: string,
 ) => {
   const report = await prisma.outageReport.findUnique({
-    where: {
-      id,
-    },
+    where: { id },
     include: {
       customer: {
         select: {

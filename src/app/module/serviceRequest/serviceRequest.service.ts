@@ -2,6 +2,7 @@ import { IQueryParams } from "../../interfaces/common";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/AppError";
 import { getSafeSortField } from "../../utils/query";
+import { deleteCacheByPrefix, getCache, setCache } from "../../utils/cache";
 import {
   ICreateServiceRequestPayload,
   IUpdateServiceRequestPayload,
@@ -31,7 +32,7 @@ const createServiceRequest = async (
       title: payload.title,
       description: payload.description,
       amount: payload.amount,
-      customerId: customerId,
+      customerId,
     },
     include: {
       customer: {
@@ -45,6 +46,8 @@ const createServiceRequest = async (
     },
   });
 
+  await deleteCacheByPrefix("serviceRequests");
+
   return serviceRequest;
 };
 
@@ -53,9 +56,17 @@ const getAllServiceRequests = async (query?: IQueryParams) => {
   const limit = query?.limit ?? 10;
   const skip = (page - 1) * limit;
 
-  const search = query?.search;
-  const sortBy = query?.sortBy;
+  const search = query?.search ?? "";
+  const sortBy = query?.sortBy ?? "";
   const sortOrder = query?.sortOrder ?? "desc";
+
+  const cacheKey = `serviceRequests:${page}:${limit}:${search}:${sortBy}:${sortOrder}`;
+
+  const cachedData = await getCache(cacheKey);
+
+  if (cachedData) {
+    return cachedData;
+  }
 
   const safeSortBy = getSafeSortField(
     sortBy,
@@ -105,7 +116,6 @@ const getAllServiceRequests = async (query?: IQueryParams) => {
       where,
       skip,
       take: limit,
-
       include: {
         customer: {
           select: {
@@ -115,23 +125,17 @@ const getAllServiceRequests = async (query?: IQueryParams) => {
             phone: true,
           },
         },
-
         payments: true,
       },
-
       orderBy: {
         [safeSortBy]: sortOrder,
       },
     }),
-
-    prisma.serviceRequest.count({
-      where,
-    }),
+    prisma.serviceRequest.count({ where }),
   ]);
 
-  return {
+  const result = {
     data: serviceRequests,
-
     meta: {
       page,
       limit,
@@ -139,6 +143,10 @@ const getAllServiceRequests = async (query?: IQueryParams) => {
       totalPages: Math.ceil(total / limit),
     },
   };
+
+  await setCache(cacheKey, result, 300);
+
+  return result;
 };
 
 const getSingleServiceRequest = async (
@@ -147,9 +155,7 @@ const getSingleServiceRequest = async (
   userRole?: string,
 ) => {
   const serviceRequest = await prisma.serviceRequest.findUnique({
-    where: {
-      id,
-    },
+    where: { id },
     include: {
       customer: {
         select: {
@@ -179,9 +185,7 @@ const updateServiceRequest = async (
   payload: IUpdateServiceRequestPayload,
 ) => {
   const existingRequest = await prisma.serviceRequest.findUnique({
-    where: {
-      id,
-    },
+    where: { id },
   });
 
   if (!existingRequest) {
@@ -200,9 +204,7 @@ const updateServiceRequest = async (
   }
 
   const updatedRequest = await prisma.serviceRequest.update({
-    where: {
-      id,
-    },
+    where: { id },
     data: payload,
     include: {
       customer: {
@@ -215,6 +217,8 @@ const updateServiceRequest = async (
       },
     },
   });
+
+  await deleteCacheByPrefix("serviceRequests");
 
   return updatedRequest;
 };

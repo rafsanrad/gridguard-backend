@@ -2,13 +2,12 @@ import { IQueryParams } from "../../interfaces/common";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/AppError";
 import { getSafeSortField } from "../../utils/query";
+import { deleteCacheByPrefix, getCache, setCache } from "../../utils/cache";
 import { ICreateAreaPayload, IUpdateAreaPayload } from "./area.interface";
 
 const createArea = async (payload: ICreateAreaPayload) => {
   const feeder = await prisma.feeder.findUnique({
-    where: {
-      id: payload.feederId,
-    },
+    where: { id: payload.feederId },
   });
 
   if (!feeder) {
@@ -20,9 +19,7 @@ const createArea = async (payload: ICreateAreaPayload) => {
   }
 
   const existingArea = await prisma.area.findUnique({
-    where: {
-      code: payload.code,
-    },
+    where: { code: payload.code },
   });
 
   if (existingArea) {
@@ -39,6 +36,8 @@ const createArea = async (payload: ICreateAreaPayload) => {
     },
   });
 
+  await deleteCacheByPrefix("areas");
+
   return area;
 };
 
@@ -47,9 +46,17 @@ const getAllAreas = async (query?: IQueryParams) => {
   const limit = query?.limit ?? 10;
   const skip = (page - 1) * limit;
 
-  const search = query?.search;
-  const sortBy = query?.sortBy;
+  const search = query?.search ?? "";
+  const sortBy = query?.sortBy ?? "";
   const sortOrder = query?.sortOrder ?? "desc";
+
+  const cacheKey = `areas:${page}:${limit}:${search}:${sortBy}:${sortOrder}`;
+
+  const cachedData = await getCache(cacheKey);
+
+  if (cachedData) {
+    return cachedData;
+  }
 
   const safeSortBy = getSafeSortField(
     sortBy,
@@ -59,7 +66,6 @@ const getAllAreas = async (query?: IQueryParams) => {
 
   const where = {
     isActive: true,
-
     ...(search
       ? {
           OR: [
@@ -97,7 +103,6 @@ const getAllAreas = async (query?: IQueryParams) => {
       where,
       skip,
       take: limit,
-
       include: {
         feeder: {
           include: {
@@ -109,20 +114,15 @@ const getAllAreas = async (query?: IQueryParams) => {
           },
         },
       },
-
       orderBy: {
         [safeSortBy]: sortOrder,
       },
     }),
-
-    prisma.area.count({
-      where,
-    }),
+    prisma.area.count({ where }),
   ]);
 
-  return {
+  const result = {
     data: areas,
-
     meta: {
       page,
       limit,
@@ -130,14 +130,15 @@ const getAllAreas = async (query?: IQueryParams) => {
       totalPages: Math.ceil(total / limit),
     },
   };
+
+  await setCache(cacheKey, result, 300);
+
+  return result;
 };
 
 const getSingleArea = async (id: string) => {
   const area = await prisma.area.findUnique({
-    where: {
-      id,
-    },
-
+    where: { id },
     include: {
       feeder: {
         include: {
@@ -160,9 +161,7 @@ const getSingleArea = async (id: string) => {
 
 const updateArea = async (id: string, payload: IUpdateAreaPayload) => {
   const existingArea = await prisma.area.findUnique({
-    where: {
-      id,
-    },
+    where: { id },
   });
 
   if (!existingArea) {
@@ -173,10 +172,7 @@ const updateArea = async (id: string, payload: IUpdateAreaPayload) => {
     const duplicateArea = await prisma.area.findFirst({
       where: {
         code: payload.code,
-
-        NOT: {
-          id,
-        },
+        NOT: { id },
       },
     });
 
@@ -187,9 +183,7 @@ const updateArea = async (id: string, payload: IUpdateAreaPayload) => {
 
   if (payload.feederId) {
     const feeder = await prisma.feeder.findUnique({
-      where: {
-        id: payload.feederId,
-      },
+      where: { id: payload.feederId },
     });
 
     if (!feeder) {
@@ -202,21 +196,18 @@ const updateArea = async (id: string, payload: IUpdateAreaPayload) => {
   }
 
   const updatedArea = await prisma.area.update({
-    where: {
-      id,
-    },
-
+    where: { id },
     data: payload,
   });
+
+  await deleteCacheByPrefix("areas");
 
   return updatedArea;
 };
 
 const deleteArea = async (id: string) => {
   const existingArea = await prisma.area.findUnique({
-    where: {
-      id,
-    },
+    where: { id },
   });
 
   if (!existingArea) {
@@ -224,14 +215,11 @@ const deleteArea = async (id: string) => {
   }
 
   const deletedArea = await prisma.area.update({
-    where: {
-      id,
-    },
-
-    data: {
-      isActive: false,
-    },
+    where: { id },
+    data: { isActive: false },
   });
+
+  await deleteCacheByPrefix("areas");
 
   return deletedArea;
 };

@@ -2,13 +2,19 @@ import { IQueryParams } from "../../interfaces/common";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/AppError";
 import { getSafeSortField } from "../../utils/query";
-import { ICreateFeederPayload, IUpdateFeederPayload } from "./feeder.interface";
+import {
+  deleteCacheByPrefix,
+  getCache,
+  setCache,
+} from "../../utils/cache";
+import {
+  ICreateFeederPayload,
+  IUpdateFeederPayload,
+} from "./feeder.interface";
 
 const createFeeder = async (payload: ICreateFeederPayload) => {
   const substation = await prisma.substation.findUnique({
-    where: {
-      id: payload.substationId,
-    },
+    where: { id: payload.substationId },
   });
 
   if (!substation) {
@@ -16,16 +22,11 @@ const createFeeder = async (payload: ICreateFeederPayload) => {
   }
 
   if (!substation.isActive) {
-    throw new AppError(
-      400,
-      "Cannot create feeder under an inactive substation",
-    );
+    throw new AppError(400, "Cannot create feeder under an inactive substation");
   }
 
   const existingFeeder = await prisma.feeder.findUnique({
-    where: {
-      code: payload.code,
-    },
+    where: { code: payload.code },
   });
 
   if (existingFeeder) {
@@ -41,6 +42,9 @@ const createFeeder = async (payload: ICreateFeederPayload) => {
     },
   });
 
+  await deleteCacheByPrefix("feeders");
+  // console.log("REDIS CACHE INVALIDATED: Feeders after CREATE");
+
   return feeder;
 };
 
@@ -49,9 +53,20 @@ const getAllFeeders = async (query?: IQueryParams) => {
   const limit = query?.limit ?? 10;
   const skip = (page - 1) * limit;
 
-  const search = query?.search;
-  const sortBy = query?.sortBy;
+  const search = query?.search ?? "";
+  const sortBy = query?.sortBy ?? "";
   const sortOrder = query?.sortOrder ?? "desc";
+
+  const cacheKey = `feeders:${page}:${limit}:${search}:${sortBy}:${sortOrder}`;
+
+  const cachedData = await getCache(cacheKey);
+
+  if (cachedData) {
+    // console.log("REDIS CACHE HIT: Feeders");
+    return cachedData;
+  }
+
+  // console.log("REDIS CACHE MISS: Fetching feeders from PostgreSQL");
 
   const safeSortBy = getSafeSortField(
     sortBy,
@@ -61,7 +76,6 @@ const getAllFeeders = async (query?: IQueryParams) => {
 
   const where = {
     isActive: true,
-
     ...(search
       ? {
           OR: [
@@ -93,7 +107,6 @@ const getAllFeeders = async (query?: IQueryParams) => {
       where,
       skip,
       take: limit,
-
       include: {
         substation: {
           include: {
@@ -101,20 +114,15 @@ const getAllFeeders = async (query?: IQueryParams) => {
           },
         },
       },
-
       orderBy: {
         [safeSortBy]: sortOrder,
       },
     }),
-
-    prisma.feeder.count({
-      where,
-    }),
+    prisma.feeder.count({ where }),
   ]);
 
-  return {
+  const result = {
     data: feeders,
-
     meta: {
       page,
       limit,
@@ -122,14 +130,16 @@ const getAllFeeders = async (query?: IQueryParams) => {
       totalPages: Math.ceil(total / limit),
     },
   };
+
+  await setCache(cacheKey, result, 300);
+  // console.log("REDIS CACHE SET: Feeders");
+
+  return result;
 };
 
 const getSingleFeeder = async (id: string) => {
   const feeder = await prisma.feeder.findUnique({
-    where: {
-      id,
-    },
-
+    where: { id },
     include: {
       substation: {
         include: {
@@ -146,11 +156,12 @@ const getSingleFeeder = async (id: string) => {
   return feeder;
 };
 
-const updateFeeder = async (id: string, payload: IUpdateFeederPayload) => {
+const updateFeeder = async (
+  id: string,
+  payload: IUpdateFeederPayload,
+) => {
   const existingFeeder = await prisma.feeder.findUnique({
-    where: {
-      id,
-    },
+    where: { id },
   });
 
   if (!existingFeeder) {
@@ -161,10 +172,7 @@ const updateFeeder = async (id: string, payload: IUpdateFeederPayload) => {
     const duplicateFeeder = await prisma.feeder.findFirst({
       where: {
         code: payload.code,
-
-        NOT: {
-          id,
-        },
+        NOT: { id },
       },
     });
 
@@ -175,9 +183,7 @@ const updateFeeder = async (id: string, payload: IUpdateFeederPayload) => {
 
   if (payload.substationId) {
     const substation = await prisma.substation.findUnique({
-      where: {
-        id: payload.substationId,
-      },
+      where: { id: payload.substationId },
     });
 
     if (!substation) {
@@ -190,21 +196,19 @@ const updateFeeder = async (id: string, payload: IUpdateFeederPayload) => {
   }
 
   const updatedFeeder = await prisma.feeder.update({
-    where: {
-      id,
-    },
-
+    where: { id },
     data: payload,
   });
+
+  await deleteCacheByPrefix("feeders");
+  // console.log("REDIS CACHE INVALIDATED: Feeders after UPDATE");
 
   return updatedFeeder;
 };
 
 const deleteFeeder = async (id: string) => {
   const existingFeeder = await prisma.feeder.findUnique({
-    where: {
-      id,
-    },
+    where: { id },
   });
 
   if (!existingFeeder) {
@@ -212,14 +216,12 @@ const deleteFeeder = async (id: string) => {
   }
 
   const deletedFeeder = await prisma.feeder.update({
-    where: {
-      id,
-    },
-
-    data: {
-      isActive: false,
-    },
+    where: { id },
+    data: { isActive: false },
   });
+
+  await deleteCacheByPrefix("feeders");
+  // console.log("REDIS CACHE INVALIDATED: Feeders after DELETE");
 
   return deletedFeeder;
 };
