@@ -3,6 +3,7 @@ import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/AppError";
 import { getSafeSortField } from "../../utils/query";
 import { deleteCacheByPrefix, getCache, setCache } from "../../utils/cache";
+import { AnalyticsService } from "../analytics/analytics.service";
 import {
   ICreateServiceRequestPayload,
   IUpdateServiceRequestPayload,
@@ -47,6 +48,7 @@ const createServiceRequest = async (
   });
 
   await deleteCacheByPrefix("serviceRequests");
+  await AnalyticsService.invalidateDashboardCache();
 
   return serviceRequest;
 };
@@ -219,6 +221,7 @@ const updateServiceRequest = async (
   });
 
   await deleteCacheByPrefix("serviceRequests");
+  await AnalyticsService.invalidateDashboardCache();
 
   return updatedRequest;
 };

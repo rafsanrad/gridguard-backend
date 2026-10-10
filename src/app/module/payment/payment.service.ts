@@ -6,11 +6,13 @@ import { ICreatePaymentPayload } from "./payment.interface";
 import { getSafeSortField } from "../../utils/query";
 import { IQueryParams } from "../../interfaces/common";
 import { deleteCacheByPrefix, getCache, setCache } from "../../utils/cache";
+import { AnalyticsService } from "../analytics/analytics.service";
 
 const invalidatePaymentCaches = async () => {
   await Promise.all([
     deleteCacheByPrefix("payments"),
     deleteCacheByPrefix("serviceRequests"),
+    AnalyticsService.invalidateDashboardCache(),
   ]);
 };
 
@@ -160,7 +162,7 @@ const executePayment = async (paymentID: string) => {
       },
     });
 
-    await deleteCacheByPrefix("payments");
+    await invalidatePaymentCaches();
 
     throw new AppError(
       400,

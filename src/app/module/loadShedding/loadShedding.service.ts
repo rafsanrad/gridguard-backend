@@ -3,6 +3,7 @@ import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/AppError";
 import { getSafeSortField } from "../../utils/query";
 import { deleteCacheByPrefix, getCache, setCache } from "../../utils/cache";
+import { AnalyticsService } from "../analytics/analytics.service";
 import {
   ICreateLoadSheddingPayload,
   IUpdateLoadSheddingPayload,
@@ -61,6 +62,7 @@ const createLoadShedding = async (
   });
 
   await deleteCacheByPrefix("loadShedding");
+  await AnalyticsService.invalidateDashboardCache();
 
   return schedule;
 };
@@ -196,7 +198,6 @@ const updateLoadShedding = async (
   }
 
   const startDateTime = payload.startDateTime ?? existingSchedule.startDateTime;
-
   const endDateTime = payload.endDateTime ?? existingSchedule.endDateTime;
 
   if (endDateTime <= startDateTime) {
@@ -231,6 +232,7 @@ const updateLoadShedding = async (
   });
 
   await deleteCacheByPrefix("loadShedding");
+  await AnalyticsService.invalidateDashboardCache();
 
   return updatedSchedule;
 };
@@ -250,6 +252,7 @@ const deleteLoadShedding = async (id: string) => {
   });
 
   await deleteCacheByPrefix("loadShedding");
+  await AnalyticsService.invalidateDashboardCache();
 
   return deletedSchedule;
 };

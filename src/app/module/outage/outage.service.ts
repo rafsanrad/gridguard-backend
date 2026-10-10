@@ -9,6 +9,7 @@ import { OutageStatus } from "../../../generated/prisma/enums";
 import { getSafeSortField } from "../../utils/query";
 import { IQueryParams } from "../../interfaces/common";
 import { deleteCacheByPrefix, getCache, setCache } from "../../utils/cache";
+import { AnalyticsService } from "../analytics/analytics.service";
 
 const createOutage = async (
   payload: ICreateOutagePayload,
@@ -51,6 +52,7 @@ const createOutage = async (
   });
 
   await deleteCacheByPrefix("outages");
+  await AnalyticsService.invalidateDashboardCache();
 
   return outage;
 };
@@ -207,6 +209,7 @@ const updateOutage = async (id: string, payload: IUpdateOutagePayload) => {
   });
 
   await deleteCacheByPrefix("outages");
+  await AnalyticsService.invalidateDashboardCache();
 
   return updatedOutage;
 };
@@ -273,6 +276,7 @@ const updateOutageStatus = async (
   });
 
   await deleteCacheByPrefix("outages");
+  await AnalyticsService.invalidateDashboardCache();
 
   return result;
 };
@@ -297,6 +301,7 @@ const deleteOutage = async (id: string) => {
   });
 
   await deleteCacheByPrefix("outages");
+  await AnalyticsService.invalidateDashboardCache();
 
   return deletedOutage;
 };
