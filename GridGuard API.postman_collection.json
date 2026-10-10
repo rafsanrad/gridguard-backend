@@ -1,0 +1,2089 @@
+{
+  "info": {
+    "_postman_id": "91723e02-2275-4be1-af20-065f518198e2",
+    "name": "GridGuard API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "56035646",
+    "_collection_link": "https://go.postman.co/collection/56035646-91723e02-2275-4be1-af20-065f518198e2?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Rafsan Test\",\n  \"email\": \"rafsan.test@gmail.com\",\n  \"password\": \"Test@12345\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/auth/register",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"rafsan.test@gmail.com\",\n  \"password\": \"Test@12345\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/auth/login",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Me",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/v1/auth/me",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "me"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/v1/auth/refresh-token",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "refresh-token"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Verify Email",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"rafsanjahink@gmail.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/auth/verify-email",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "verify-email"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Verify OTP",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"rafsanjahink@gmail.com\",\n  \"otp\": \"249276\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/auth/verify-email-otp",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "verify-email-otp"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"rafsanjahink@gmail.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/auth/forgot-password",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "forgot-password"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"rafsanjahink@gmail.com\",\n  \"otp\": \"593138\",\n  \"newPassword\": \"1r2a3d4u\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/auth/reset-password",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "reset-password"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test Search",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Single USer",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test Block/Unblock User",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"BLOCKED\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/users/167df263-1032-48bf-b464-cfd7c836963e/status",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "users",
+                "167df263-1032-48bf-b464-cfd7c836963e",
+                "status"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test Update User",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Test Customer\",\n  \"phone\": \"01700000000\",\n  \"gender\": \"MALE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/users/167df263-1032-48bf-b464-cfd7c836963e",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "users",
+                "167df263-1032-48bf-b464-cfd7c836963e"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Soft Delete User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Zones",
+      "item": [
+        {
+          "name": "Create Zone",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Dhaka North Zone\",\n  \"code\": \"DNZ-001\",\n  \"description\": \"Northern area electricity zone\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/zones",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "zones"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All ZOnes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/v1/zones",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "zones"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Single Zone",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/v1/zones/281a0f20-14a4-47d8-ba69-9b6911bd0264",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "zones",
+                "281a0f20-14a4-47d8-ba69-9b6911bd0264"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update ZOne",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Dhaka North Updated Zone\",\n  \"description\": \"Updated northern electricity zone\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/zones/281a0f20-14a4-47d8-ba69-9b6911bd0264",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "zones",
+                "281a0f20-14a4-47d8-ba69-9b6911bd0264"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Soft Delete Zone",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/v1/zones/281a0f20-14a4-47d8-ba69-9b6911bd0264",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "zones",
+                "281a0f20-14a4-47d8-ba69-9b6911bd0264"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Pagination/Search/Sorting",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Substations",
+      "item": [
+        {
+          "name": "Create Substation",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Dhaka North Substation\",\n  \"code\": \"DNZ-001\",\n  \"address\": \"Mirpur, Dhaka\",\n  \"capacity\": 50,\n  \"zoneId\": \"281a0f20-14a4-47d8-ba69-9b6911bd0264\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/substations",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "substations"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Substation",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/v1/substations",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "substations"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Single Substation",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Substation",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Dhaka North Main Substation\",\n  \"capacity\": 75\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/substations/41b52c28-3635-46d6-acb5-2a0439f8a8d9",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "substations",
+                "41b52c28-3635-46d6-acb5-2a0439f8a8d9"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Soft Delete Substation",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/v1/substations/41b52c28-3635-46d6-acb5-2a0439f8a8d9",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "substations",
+                "41b52c28-3635-46d6-acb5-2a0439f8a8d9"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Feeders",
+      "item": [
+        {
+          "name": "Create Feeder",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Dhaka North Main Feeder\",\n  \"code\": \"DNF-001\",\n  \"voltageLevel\": \"33kV\",\n  \"substationId\": \"41b52c28-3635-46d6-acb5-2a0439f8a8d9\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/feeders",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "feeders"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Feeders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Single Feeder",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Feeder",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Dhaka North Main Feeder Updated\",\n  \"voltageLevel\": \"11kV\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/feeders/7e0e0f19-4f43-42c7-b8ab-b971237307a0",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "feeders",
+                "7e0e0f19-4f43-42c7-b8ab-b971237307a0"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Soft Delete Feeder",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/v1/feeders/7e0e0f19-4f43-42c7-b8ab-b971237307a0",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "feeders",
+                "7e0e0f19-4f43-42c7-b8ab-b971237307a0"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Areas",
+      "item": [
+        {
+          "name": "Create Area",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Uttara Residential Area\",\n  \"code\": \"UTA-001\",\n  \"address\": \"Uttara, Dhaka\",\n  \"description\": \"Residential area under Dhaka North feeder\",\n  \"feederId\": \"7e0e0f19-4f43-42c7-b8ab-b971237307a0\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/areas",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "areas"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Areas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Single Areas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Area",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Uttara Residential Area Updated\",\n  \"description\": \"Updated North Dhaka residential area\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/areas/39bc9980-ffe9-4cb8-adc4-c828bbf8823c",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "areas",
+                "39bc9980-ffe9-4cb8-adc4-c828bbf8823c"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Soft Delete Area",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/v1/areas/39bc9980-ffe9-4cb8-adc4-c828bbf8823c",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "areas",
+                "39bc9980-ffe9-4cb8-adc4-c828bbf8823c"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Technicians",
+      "item": [
+        {
+          "name": "Create Technician",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"TECH-NORTH-001\",\n  \"name\": \"Rahim Ahmed\",\n  \"phone\": \"01712345678\",\n  \"specialization\": \"Electrical Maintenance\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/technicians",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "technicians"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Technicians",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Single Technician",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Technicians",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Rahim Ahmed Updated\",\n  \"specialization\": \"Power Distribution\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/technicians/117341f2-1dd5-464d-a8a1-760486a4647f",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "technicians",
+                "117341f2-1dd5-464d-a8a1-760486a4647f"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Soft Delete Technician",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/v1/technicians/117341f2-1dd5-464d-a8a1-760486a4647f",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "technicians",
+                "117341f2-1dd5-464d-a8a1-760486a4647f"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Load Shedding",
+      "item": [
+        {
+          "name": "Create Schedule",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"North Dhaka Scheduled Load Shedding\",\n  \"description\": \"Planned maintenance load shedding\",\n  \"startDateTime\": \"2026-10-05T10:00:00.000Z\",\n  \"endDateTime\": \"2026-10-05T12:00:00.000Z\",\n  \"reason\": \"Routine electrical maintenance\",\n  \"feederId\": \"7e0e0f19-4f43-42c7-b8ab-b971237307a0\",\n  \"createdById\": \"3ea09ce0-b978-4e13-9dc3-b9ee5e4b8992\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/load-shedding",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "load-shedding"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Single",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Load-Shedding",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"North Dhaka Maintenance Load Shedding\",\n  \"reason\": \"Updated maintenance schedule\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/load-shedding/85c17c20-6ff6-4a60-86c2-3d3b4687ad4c",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "load-shedding",
+                "85c17c20-6ff6-4a60-86c2-3d3b4687ad4c"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test Conflict",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Conflicting Schedule\",\n  \"startDateTime\": \"2026-10-05T11:00:00.000Z\",\n  \"endDateTime\": \"2026-10-05T13:00:00.000Z\",\n  \"feederId\": \"7e0e0f19-4f43-42c7-b8ab-b971237307a0\",\n  \"createdById\": \"3ea09ce0-b978-4e13-9dc3-b9ee5e4b8992\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/load-shedding",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "load-shedding"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel Schedule",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/v1/load-shedding/85c17c20-6ff6-4a60-86c2-3d3b4687ad4c",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "load-shedding",
+                "85c17c20-6ff6-4a60-86c2-3d3b4687ad4c"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Outage",
+      "item": [
+        {
+          "name": "Create Outage",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Transformer Failure at Dhanmondi\",\n  \"description\": \"Unexpected power outage caused by transformer failure\",\n  \"type\": \"UNPLANNED\",\n  \"startedAt\": \"2026-10-01T10:00:00.000Z\",\n  \"estimatedRestoredAt\": \"2026-10-01T14:00:00.000Z\",\n  \"cause\": \"Transformer failure\",\n  \"affectedCustomers\": 250,\n  \"feederId\": \"7e0e0f19-4f43-42c7-b8ab-b971237307a0\",\n  \"reportedById\": \"3ea09ce0-b978-4e13-9dc3-b9ee5e4b8992\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/outages",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "outages"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Outages",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Single Outage",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Outage",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Transformer Failure at Dhanmondi Updated\",\n  \"description\": \"Transformer inspection is currently in progress\",\n  \"estimatedRestoredAt\": \"2026-10-01T15:00:00.000Z\",\n  \"cause\": \"Main transformer failure\",\n  \"affectedCustomers\": 300\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/outages/14b6746f-f528-46d9-83ec-431ae48cb031",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "outages",
+                "14b6746f-f528-46d9-83ec-431ae48cb031"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test Invalid Status Transition",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"REPAIRING\",\n  \"notes\": \"Testing invalid transition\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/outages/14b6746f-f528-46d9-83ec-431ae48cb031/status",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "outages",
+                "14b6746f-f528-46d9-83ec-431ae48cb031",
+                "status"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "REPORTED → ACKNOWLEDGED",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"ACKNOWLEDGED\",\n  \"notes\": \"Outage report acknowledged by operator\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/outages/14b6746f-f528-46d9-83ec-431ae48cb031/status",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "outages",
+                "14b6746f-f528-46d9-83ec-431ae48cb031",
+                "status"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "ACKNOWLEDGED → ASSIGNED",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"ASSIGNED\",\n  \"notes\": \"Technician assignment is ready\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/outages/14b6746f-f528-46d9-83ec-431ae48cb031/status",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "outages",
+                "14b6746f-f528-46d9-83ec-431ae48cb031",
+                "status"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "ASSIGNED → INVESTIGATING",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"INVESTIGATING\",\n  \"notes\": \"Technician started investigating the fault\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/outages/14b6746f-f528-46d9-83ec-431ae48cb031/status",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "outages",
+                "14b6746f-f528-46d9-83ec-431ae48cb031",
+                "status"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "INVESTIGATING → REPAIRING",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"REPAIRING\",\n  \"notes\": \"Repair work has started\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/outages/14b6746f-f528-46d9-83ec-431ae48cb031/status",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "outages",
+                "14b6746f-f528-46d9-83ec-431ae48cb031",
+                "status"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "REPAIRING → RESTORED",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"RESTORED\",\n  \"notes\": \"Power supply has been restored\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/outages/14b6746f-f528-46d9-83ec-431ae48cb031/status",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "outages",
+                "14b6746f-f528-46d9-83ec-431ae48cb031",
+                "status"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "RESTORED → CLOSED",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"CLOSED\",\n  \"notes\": \"Outage resolved and case closed\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/outages/14b6746f-f528-46d9-83ec-431ae48cb031/status",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "outages",
+                "14b6746f-f528-46d9-83ec-431ae48cb031",
+                "status"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test Invalid Transition",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"REPAIRING\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/outages/14b6746f-f528-46d9-83ec-431ae48cb031/status",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "outages",
+                "14b6746f-f528-46d9-83ec-431ae48cb031",
+                "status"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Soft Delete Outage",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/v1/outages/14b6746f-f528-46d9-83ec-431ae48cb031",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "outages",
+                "14b6746f-f528-46d9-83ec-431ae48cb031"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Outage Reports",
+      "item": [
+        {
+          "name": "Create Report",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"There has been no electricity in our area since morning.\",\n  \"location\": \"Dhanmondi, Dhaka\",\n  \"customerId\": \"3ea09ce0-b978-4e13-9dc3-b9ee5e4b8992\",\n  \"outageId\": \"8aa56a92-ea9b-4bab-8c6a-adc381590688\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/outage-reports",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "outage-reports"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get ALl Reports",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Single Report",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test Duplicate Report",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"There has been no electricity in our area since morning.\",\n  \"location\": \"Dhanmondi, Dhaka\",\n  \"customerId\": \"3ea09ce0-b978-4e13-9dc3-b9ee5e4b8992\",\n  \"outageId\": \"8aa56a92-ea9b-4bab-8c6a-adc381590688\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/outage-reports",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "outage-reports"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Technician Assignments",
+      "item": [
+        {
+          "name": "Create Assignment",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"outageId\": \"8aa56a92-ea9b-4bab-8c6a-adc381590688\",\n  \"technicianId\": \"117341f2-1dd5-464d-a8a1-760486a4647f\",\n  \"assignedById\": \"594f04fc-7642-4864-afb4-7c1c22214081\",\n  \"notes\": \"Please inspect the transformer and restore power.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/technician-assignments",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "technician-assignments"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Assignments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Single Assignments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Assign an Unavailable Technician",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"outageId\": \"ec732f4a-33c0-42e0-be86-2f19ea101166\",\n  \"technicianId\": \"117341f2-1dd5-464d-a8a1-760486a4647f\",\n  \"assignedById\": \"594f04fc-7642-4864-afb4-7c1c22214081\",\n  \"notes\": \"Trying to assign an already assigned technician.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/technician-assignments",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "technician-assignments"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Invalid Outage",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"outageId\": \"00000000-0000-0000-0000-000000000000\",\n  \"technicianId\": \"117341f2-1dd5-464d-a8a1-760486a4647f\",\n  \"assignedById\": \"594f04fc-7642-4864-afb4-7c1c22214081\",\n  \"notes\": \"Testing invalid outage.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/technician-assignments",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "technician-assignments"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Invalid Technician",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"outageId\": \"8aa56a92-ea9b-4bab-8c6a-adc381590688\",\n  \"technicianId\": \"00000000-0000-0000-0000-000000000000\",\n  \"assignedById\": \"594f04fc-7642-4864-afb4-7c1c22214081\",\n  \"notes\": \"Testing invalid technician.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/technician-assignments",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "technician-assignments"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Invalid Assigning User",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"outageId\": \"8aa56a92-ea9b-4bab-8c6a-adc381590688\",\n  \"technicianId\": \"117341f2-1dd5-464d-a8a1-760486a4647f\",\n  \"assignedById\": \"00000000-0000-0000-0000-000000000000\",\n  \"notes\": \"Testing invalid assigning user.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/technician-assignments",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "technician-assignments"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Cannot Assign to Restored/Closed Outage",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"outageId\": \"ec732f4a-33c0-42e0-be86-2f19ea101166\",\n  \"technicianId\": \"45e47493-b359-45a7-975e-122b833df2b8\",\n  \"assignedById\": \"594f04fc-7642-4864-afb4-7c1c22214081\",\n  \"notes\": \"Testing assignment to completed outage.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/technician-assignments",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "technician-assignments"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Service Requests",
+      "item": [
+        {
+          "name": "Create Service Request",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"New Electricity Connection\",\n  \"description\": \"Request for a new electricity connection.\",\n  \"amount\": 2500,\n  \"customerId\": \"3ea09ce0-b978-4e13-9dc3-b9ee5e4b8992\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/service-requests",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "service-requests"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Service Requests",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Single Service Requests",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Service Requests",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Updated request description.\",\n  \"status\": \"APPROVED\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/service-requests/52c20486-df31-43b9-abbc-f21977e902ed",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "service-requests",
+                "52c20486-df31-43b9-abbc-f21977e902ed"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Invalid Service Request ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Invalid Customer ID",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Test Request\",\n  \"description\": \"Testing invalid customer.\",\n  \"amount\": 1000,\n  \"customerId\": \"0abeabea-62fe-4bdd-9e2e-77eae71103b1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/service-requests",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "service-requests"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "Create Payment",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serviceRequestId\": \"c0c40f98-c274-4d89-8167-bb802f5cfafb\",\n  \"customerId\": \"3ea09ce0-b978-4e13-9dc3-b9ee5e4b8992\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/payments/create",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "payments",
+                "create"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All payments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "Create Notifications",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Power Outage Alert\",\n  \"message\": \"There is an unexpected power outage in your area.\",\n  \"type\": \"OUTAGE\",\n  \"userId\": \"3ea09ce0-b978-4e13-9dc3-b9ee5e4b8992\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/notifications",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "notifications"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Notifications",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Single Notification",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Mark Notification as Read",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/v1/notifications/baa44ec3-9526-4b92-a64c-f13cc1e91921/read",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "notifications",
+                "baa44ec3-9526-4b92-a64c-f13cc1e91921",
+                "read"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Invalid Notification ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Invalid User Id",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Test Notification\",\n  \"message\": \"Testing invalid user.\",\n  \"type\": \"SYSTEM\",\n  \"userId\": \"invalid-user-id\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/notifications",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "v1",
+                "notifications"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Analytics",
+      "item": [
+        {
+          "name": "Get All Analytics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Audit Logs",
+      "item": [
+        {
+          "name": "Get Logs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
