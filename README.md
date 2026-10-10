@@ -48,3 +48,6 @@ The Postman collection is available in the project repository:
 - `CUSTOMER`
 - `OPERATOR`
 - `ADMIN`
+
+Created By: Rafsan Rad
+Mail: rafsanjahink@gmail.com
