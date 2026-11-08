@@ -1,8 +1,10 @@
+
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import express, { Application, Request, Response } from "express";
 import httpStatus from "http-status";
 import config from "./app/config";
+import { connectRedis } from "./app/lib/redis";
 import { globalErrorHandler } from "./app/middleware/globalErrorHandler";
 import { notFound } from "./app/middleware/notFound";
 import { AuthRoutes } from "./app/module/auth/auth.route";
@@ -24,12 +26,24 @@ import { AnalyticsRoutes } from "./app/module/analytics/analytics.route";
 
 const app: Application = express();
 
+// CORS middleware
 app.use(
   cors({
     origin: config.frontend_url,
     credentials: true,
   }),
 );
+
+// Initialize Redis connection
+app.use(async (_req, _res, next) => {
+  try {
+    await connectRedis();
+  } catch (error) {
+    console.error("Redis initialization failed:", error);
+  }
+
+  next();
+});
 
 // Enable URL-encoded form data parsing
 app.use(express.urlencoded({ extended: true }));
@@ -44,6 +58,7 @@ app.use(
 app.use(express.json());
 app.use(cookieParser());
 
+// API routes
 app.use("/api/v1/users", UserRoutes);
 app.use("/api/v1/auth", AuthRoutes);
 app.use("/api/v1/zones", ZoneRoutes);
@@ -62,7 +77,7 @@ app.use("/api/v1/audit-logs", AuditLogRoutes);
 app.use("/api/v1/analytics", AnalyticsRoutes);
 
 // Basic route
-app.get("/", async (req: Request, res: Response) => {
+app.get("/", async (_req: Request, res: Response) => {
   res.status(httpStatus.OK).json({
     success: true,
     message:
@@ -70,6 +85,7 @@ app.get("/", async (req: Request, res: Response) => {
   });
 });
 
+// Error handling
 app.use(globalErrorHandler);
 app.use(notFound);
 
