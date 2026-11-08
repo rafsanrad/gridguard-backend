@@ -4,6 +4,9 @@ import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
 import { PaymentService } from "./payment.service";
 import { AppError } from "../../utils/AppError";
+import Stripe from "stripe";
+import { stripe } from "../../lib/stripe";
+import config from "../../config";
 
 const createPayment = catchAsync(async (req: Request, res: Response) => {
   const result = await PaymentService.createPayment(
@@ -38,7 +41,7 @@ const getAllPayments = catchAsync(async (req: Request, res: Response) => {
     success: true,
     message: "Payments retrieved successfully",
     data: result.data,
-    meta: result.meta
+    meta: result.meta,
   });
 });
 
@@ -90,8 +93,71 @@ const bkashCallback = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const createStripePayment = catchAsync(async (req: Request, res: Response) => {
+  const result = await PaymentService.createStripePayment(
+    req.body,
+    req.user?.userId as string,
+  );
+
+  sendResponse(res, {
+    statusCode: httpStatus.CREATED,
+    success: true,
+    message: "Stripe payment created successfully",
+    data: result,
+  });
+});
+
+const stripeWebhook = async (req: Request, res: Response) => {
+  const signature = req.headers["stripe-signature"];
+
+  if (!signature || typeof signature !== "string") {
+    return res.status(400).send("Missing Stripe signature");
+  }
+
+  let event: Stripe.Event;
+
+  try {
+    event = stripe.webhooks.constructEvent(
+      req.body,
+      signature,
+      config.stripe_webhook_secret,
+    );
+  } catch (error) {
+    return res
+      .status(400)
+      .send(
+        `Webhook signature verification failed: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+      );
+  }
+
+  try {
+    if (
+      event.type === "checkout.session.completed" ||
+      event.type === "checkout.session.async_payment_succeeded" ||
+      event.type === "checkout.session.async_payment_failed"
+    ) {
+      const session = event.data.object as Stripe.Checkout.Session;
+
+      await PaymentService.handleStripeWebhook(event.type, session);
+    }
+
+    return res.status(200).json({ received: true });
+  } catch (error) {
+    console.error("Stripe webhook processing failed:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Stripe webhook processing failed",
+    });
+  }
+};
+
 export const PaymentController = {
   createPayment,
+  createStripePayment,
+  stripeWebhook,
   executePayment,
   getAllPayments,
   getSinglePayment,

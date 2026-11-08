@@ -11,16 +11,11 @@ const router = Router();
 router.post(
   "/create",
   auth(Role.CUSTOMER),
-  validateRequest(
-    PaymentValidation.createPaymentSchema,
-  ),
+  validateRequest(PaymentValidation.createPaymentSchema),
   PaymentController.createPayment,
 );
 
-router.post(
-  "/execute",
-  PaymentController.executePayment,
-);
+router.post("/execute", PaymentController.executePayment);
 
 router.get(
   "/",
@@ -35,9 +30,18 @@ router.get(
   PaymentController.getSinglePayment,
 );
 
-router.get(
-  "/bkash/callback",
-  PaymentController.bkashCallback,
+router.get("/bkash/callback", PaymentController.bkashCallback);
+
+router.post(
+  "/stripe/create",
+  auth(Role.CUSTOMER),
+  validateRequest(PaymentValidation.createStripePaymentSchema),
+  PaymentController.createStripePayment,
+);
+
+router.post(
+  "/stripe/webhook",
+  PaymentController.stripeWebhook,
 );
 
 export const PaymentRoutes = router;

@@ -34,6 +34,12 @@ app.use(
 // Enable URL-encoded form data parsing
 app.use(express.urlencoded({ extended: true }));
 
+// Stripe webhook needs the raw request body
+app.use(
+  "/api/v1/payments/stripe/webhook",
+  express.raw({ type: "application/json" }),
+);
+
 // Middleware to parse JSON bodies
 app.use(express.json());
 app.use(cookieParser());

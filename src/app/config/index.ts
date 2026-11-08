@@ -33,7 +33,7 @@ export default {
   smtp_user: process.env.SMTP_USER!,
   smtp_password: process.env.SMTP_PASSWORD!,
   email_sender: process.env.EMAIL_SENDER!,
-  
+
   cloudinary_cloud_name: process.env.CLOUDINARY_CLOUD_NAME!,
   cloudinary_api_key: process.env.CLOUDINARY_API_KEY!,
   cloudinary_api_secret: process.env.CLOUDINARY_API_SECRET!,
@@ -44,4 +44,8 @@ export default {
   bkash_app_key: process.env.BKASH_APP_KEY!,
   bkash_app_secret: process.env.BKASH_APP_SECRET!,
   bkash_callback_url: process.env.BKASH_CALLBACK_URL!,
+  stripe_secret_key: process.env.STRIPE_SECRET_KEY!,
+  stripe_webhook_secret: process.env.STRIPE_WEBHOOK_SECRET!,
+  stripe_success_url: process.env.STRIPE_SUCCESS_URL!,
+  stripe_cancel_url: process.env.STRIPE_CANCEL_URL!,
 };

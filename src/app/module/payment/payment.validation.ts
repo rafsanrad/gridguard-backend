@@ -6,6 +6,13 @@ const createPaymentSchema = z.object({
     .min(1, "Service request ID is required"),
 });
 
+const createStripePaymentSchema = z.object({
+  serviceRequestId: z
+    .string()
+    .min(1, "Service request ID is required"),
+});
+
 export const PaymentValidation = {
   createPaymentSchema,
+  createStripePaymentSchema,
 };
