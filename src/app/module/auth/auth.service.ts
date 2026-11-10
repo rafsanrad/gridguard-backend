@@ -521,6 +521,21 @@ const getMe = async (user: IRequestUser) => {
     omit: {
       password: true,
     },
+    include: {
+      area: {
+        include: {
+          feeder: {
+            include: {
+              substation: {
+                include: {
+                  zone: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
   });
 
   if (!existingUser) {

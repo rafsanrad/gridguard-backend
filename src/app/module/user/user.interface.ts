@@ -9,4 +9,5 @@ export interface IUpdateUserPayload {
   phone?: string;
   gender?: "MALE" | "FEMALE" | "OTHER";
   role?: Role;
+  areaId?: string | null;
 }

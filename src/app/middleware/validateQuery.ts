@@ -14,6 +14,7 @@ declare global {
         sortBy?: string;
         sortOrder: "asc" | "desc";
         role?: "CUSTOMER" | "OPERATOR" | "ADMIN";
+        feederId?: string;
       };
     }
   }

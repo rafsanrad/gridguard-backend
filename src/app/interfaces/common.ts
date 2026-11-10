@@ -4,4 +4,5 @@ export interface IQueryParams {
   search?: string;
   sortBy?: string;
   sortOrder?: "asc" | "desc";
+  feederId?: string;
 }

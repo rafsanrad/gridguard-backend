@@ -1,10 +1,7 @@
 import { z } from "zod";
 
 const updateUserStatusSchema = z.object({
-  status: z.enum([
-    "ACTIVE",
-    "BLOCKED",
-  ]),
+  status: z.enum(["ACTIVE", "BLOCKED"]),
 });
 
 const updateUserSchema = z.object({
@@ -19,13 +16,11 @@ const updateUserSchema = z.object({
     .max(20, "Phone number cannot exceed 20 characters")
     .optional(),
 
-  gender: z
-    .enum(["MALE", "FEMALE", "OTHER"])
-    .optional(),
+  gender: z.enum(["MALE", "FEMALE", "OTHER"]).optional(),
 
-  role: z
-    .enum(["CUSTOMER", "OPERATOR", "ADMIN"])
-    .optional(),
+  role: z.enum(["CUSTOMER", "OPERATOR", "ADMIN"]).optional(),
+
+  areaId: z.uuid("Invalid area ID").nullable().optional(),
 });
 
 export const UserValidation = {

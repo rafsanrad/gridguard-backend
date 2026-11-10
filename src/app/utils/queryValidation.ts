@@ -12,4 +12,5 @@ export const querySchema = z.object({
   sortOrder: z.enum(["asc", "desc"]).default("desc"),
 
   role: z.enum(["CUSTOMER", "OPERATOR", "ADMIN"]).optional(),
+  feederId: z.string().uuid("Invalid feeder ID").optional(),
 });

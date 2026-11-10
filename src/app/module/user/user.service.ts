@@ -237,6 +237,21 @@ const updateUser = async (
     );
   }
 
+  // Validate the selected area before assigning it
+  if (payload.areaId) {
+    const area = await prisma.area.findUnique({
+      where: { id: payload.areaId },
+    });
+
+    if (!area) {
+      throw new AppError(404, "Area not found");
+    }
+
+    if (!area.isActive) {
+      throw new AppError(400, "Cannot assign an inactive area");
+    }
+  }
+
   const updatedUser = await prisma.$transaction(async (tx) => {
     const result = await tx.user.update({
       where: { id },
@@ -245,6 +260,7 @@ const updateUser = async (
         phone: payload.phone,
         gender: payload.gender,
         role: payload.role,
+        areaId: payload.areaId,
       },
       select: {
         id: true,
@@ -272,12 +288,14 @@ const updateUser = async (
           phone: user.phone,
           gender: user.gender,
           role: user.role,
+          areaId: user.areaId,
         },
         newValues: {
           name: payload.name ?? user.name,
           phone: payload.phone ?? user.phone,
           gender: payload.gender ?? user.gender,
           role: payload.role ?? user.role,
+          areaId: payload.areaId !== undefined ? payload.areaId : user.areaId,
         },
         actorId,
       },

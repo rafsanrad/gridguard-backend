@@ -67,7 +67,9 @@ const createLoadShedding = async (
   return schedule;
 };
 
-const getAllLoadShedding = async (query?: IQueryParams) => {
+const getAllLoadShedding = async (
+  query?: IQueryParams & { feederId?: string },
+) => {
   const page = query?.page ?? 1;
   const limit = query?.limit ?? 10;
   const skip = (page - 1) * limit;
@@ -75,8 +77,9 @@ const getAllLoadShedding = async (query?: IQueryParams) => {
   const search = query?.search ?? "";
   const sortBy = query?.sortBy ?? "";
   const sortOrder = query?.sortOrder ?? "desc";
+  const feederId = query?.feederId ?? "";
 
-  const cacheKey = `loadShedding:${page}:${limit}:${search}:${sortBy}:${sortOrder}`;
+  const cacheKey = `loadShedding:${page}:${limit}:${search}:${sortBy}:${sortOrder}:${feederId}`;
 
   const cachedData = await getCache(cacheKey);
 
@@ -98,6 +101,7 @@ const getAllLoadShedding = async (query?: IQueryParams) => {
   );
 
   const where = {
+    ...(feederId ? { feederId } : {}),
     ...(search
       ? {
           OR: [
