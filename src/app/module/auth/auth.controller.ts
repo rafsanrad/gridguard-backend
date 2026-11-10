@@ -202,11 +202,32 @@ const refreshToken = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const logoutUser = catchAsync(async (req: Request, res: Response) => {
+  const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: (process.env.NODE_ENV === "production"
+      ? "none"
+      : "lax") as "none" | "lax",
+  };
+
+  res.clearCookie("accessToken", cookieOptions);
+  res.clearCookie("refreshToken", cookieOptions);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: "Logged out successfully",
+    data: null,
+  });
+});
+
 export const AuthController = {
   registerCustomer,
   verifyEmail,
   verifyEmailOtp,
   loginUser,
+  logoutUser,
   googleLogin,
   googleAuth,
   googleCallback,
