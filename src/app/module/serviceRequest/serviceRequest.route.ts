@@ -25,6 +25,13 @@ router.get(
 );
 
 router.get(
+  "/my",
+  auth(Role.CUSTOMER),
+  validateQuery,
+  ServiceRequestController.getMyServiceRequests,
+);
+
+router.get(
   "/:id",
   auth(Role.ADMIN, Role.OPERATOR, Role.CUSTOMER),
   ServiceRequestController.getSingleServiceRequest,

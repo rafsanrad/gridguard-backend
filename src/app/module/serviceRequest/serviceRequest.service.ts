@@ -151,6 +151,72 @@ const getAllServiceRequests = async (query?: IQueryParams) => {
   return result;
 };
 
+const getMyServiceRequests = async (
+  customerId: string,
+  query?: IQueryParams,
+) => {
+  const page = query?.page ?? 1;
+  const limit = query?.limit ?? 10;
+  const skip = (page - 1) * limit;
+
+  const search = query?.search ?? "";
+  const sortBy = query?.sortBy ?? "";
+  const sortOrder = query?.sortOrder ?? "desc";
+
+  const safeSortBy = getSafeSortField(
+    sortBy,
+    ["title", "status", "amount", "createdAt", "updatedAt", "completedAt"],
+    "createdAt",
+  );
+
+  const where = {
+    customerId,
+    ...(search
+      ? {
+          OR: [
+            {
+              title: {
+                contains: search,
+                mode: "insensitive" as const,
+              },
+            },
+            {
+              description: {
+                contains: search,
+                mode: "insensitive" as const,
+              },
+            },
+          ],
+        }
+      : {}),
+  };
+
+  const [serviceRequests, total] = await prisma.$transaction([
+    prisma.serviceRequest.findMany({
+      where,
+      skip,
+      take: limit,
+      include: {
+        payments: true,
+      },
+      orderBy: {
+        [safeSortBy]: sortOrder,
+      },
+    }),
+    prisma.serviceRequest.count({ where }),
+  ]);
+
+  return {
+    data: serviceRequests,
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
+};
+
 const getSingleServiceRequest = async (
   id: string,
   userId?: string,
@@ -254,6 +320,7 @@ const updateServiceRequest = async (
 export const ServiceRequestService = {
   createServiceRequest,
   getAllServiceRequests,
+  getMyServiceRequests,
   getSingleServiceRequest,
   updateServiceRequest,
 };

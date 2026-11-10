@@ -51,6 +51,21 @@ const getSingleServiceRequest = catchAsync(
   },
 );
 
+const getMyServiceRequests = catchAsync(async (req: Request, res: Response) => {
+  const result = await ServiceRequestService.getMyServiceRequests(
+    req.user!.userId,
+    req.validatedQuery,
+  );
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Your service requests fetched successfully",
+    data: result.data,
+    meta: result.meta,
+  });
+});
+
 const updateServiceRequest = catchAsync(async (req: Request, res: Response) => {
   const result = await ServiceRequestService.updateServiceRequest(
     req.params.id as string,
@@ -69,6 +84,7 @@ const updateServiceRequest = catchAsync(async (req: Request, res: Response) => {
 export const ServiceRequestController = {
   createServiceRequest,
   getAllServiceRequests,
+  getMyServiceRequests,
   getSingleServiceRequest,
   updateServiceRequest,
 };
