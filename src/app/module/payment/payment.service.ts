@@ -332,6 +332,96 @@ const getAllPayments = async (query?: IQueryParams) => {
   return result;
 };
 
+const getMyPayments = async (customerId: string, query?: IQueryParams) => {
+  const page = Math.max(1, query?.page ?? 1);
+  const limit = Math.max(1, Math.min(query?.limit ?? 10, 100));
+  const skip = (page - 1) * limit;
+
+  const search = query?.search ?? "";
+  const sortBy = query?.sortBy ?? "";
+  const sortOrder = query?.sortOrder ?? "desc";
+
+  const safeSortBy = getSafeSortField(
+    sortBy,
+    [
+      "merchantInvoiceNumber",
+      "amount",
+      "currency",
+      "provider",
+      "status",
+      "paidAt",
+      "createdAt",
+      "updatedAt",
+    ],
+    "createdAt",
+  );
+
+  const where = {
+    customerId,
+    ...(search
+      ? {
+          OR: [
+            {
+              merchantInvoiceNumber: {
+                contains: search,
+                mode: "insensitive" as const,
+              },
+            },
+            {
+              serviceRequest: {
+                title: {
+                  contains: search,
+                  mode: "insensitive" as const,
+                },
+              },
+            },
+          ],
+        }
+      : {}),
+  };
+
+  const [payments, total] = await prisma.$transaction([
+    prisma.payment.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: {
+        [safeSortBy]: sortOrder,
+      },
+      select: {
+        id: true,
+        merchantInvoiceNumber: true,
+        amount: true,
+        currency: true,
+        provider: true,
+        status: true,
+        transactionId: true,
+        paidAt: true,
+        createdAt: true,
+        updatedAt: true,
+        serviceRequest: {
+          select: {
+            id: true,
+            title: true,
+            status: true,
+          },
+        },
+      },
+    }),
+    prisma.payment.count({ where }),
+  ]);
+
+  return {
+    data: payments,
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
+};
+
 const getSinglePayment = async (
   id: string,
   userId?: string,
@@ -653,5 +743,6 @@ export const PaymentService = {
   reconcileStripePayment,
   executePayment,
   getAllPayments,
+  getMyPayments,
   getSinglePayment,
 };

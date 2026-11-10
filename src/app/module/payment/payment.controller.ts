@@ -45,6 +45,21 @@ const getAllPayments = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getMyPayments = catchAsync(async (req: Request, res: Response) => {
+  const result = await PaymentService.getMyPayments(
+    req.user!.userId,
+    req.validatedQuery,
+  );
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Your payment history fetched successfully",
+    data: result.data,
+    meta: result.meta,
+  });
+});
+
 const getSinglePayment = catchAsync(async (req: Request, res: Response) => {
   const result = await PaymentService.getSinglePayment(
     req.params.id as string,
@@ -160,6 +175,7 @@ export const PaymentController = {
   stripeWebhook,
   executePayment,
   getAllPayments,
+  getMyPayments,
   getSinglePayment,
   bkashCallback,
 };

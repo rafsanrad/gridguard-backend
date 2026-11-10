@@ -25,6 +25,13 @@ router.get(
 );
 
 router.get(
+  "/my",
+  auth(Role.CUSTOMER),
+  validateQuery,
+  PaymentController.getMyPayments,
+);
+
+router.get(
   "/:id",
   auth(Role.ADMIN, Role.OPERATOR, Role.CUSTOMER),
   PaymentController.getSinglePayment,
@@ -39,9 +46,6 @@ router.post(
   PaymentController.createStripePayment,
 );
 
-router.post(
-  "/stripe/webhook",
-  PaymentController.stripeWebhook,
-);
+router.post("/stripe/webhook", PaymentController.stripeWebhook);
 
 export const PaymentRoutes = router;
