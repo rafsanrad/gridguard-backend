@@ -78,34 +78,63 @@ const getSinglePayment = catchAsync(async (req: Request, res: Response) => {
 const bkashCallback = catchAsync(async (req: Request, res: Response) => {
   const { paymentID, status } = req.query;
 
-  if (!paymentID) {
-    throw new AppError(httpStatus.BAD_REQUEST, "Payment ID is required");
+  if (typeof paymentID !== "string" || !paymentID.trim()) {
+    throw new AppError(httpStatus.BAD_REQUEST, "Valid payment ID is required");
   }
 
-  if (status === "cancel") {
-    return res.status(httpStatus.OK).json({
-      success: false,
-      statusCode: httpStatus.OK,
-      message: "bKash payment was cancelled",
-    });
+  const frontendUrl = (config.frontend_url ?? "http://localhost:3000").replace(
+    /\/$/,
+    "",
+  );
+
+  // Check the payment against bKash before acting
+  const verification = await PaymentService.verifyBkashPaymentStatus(paymentID);
+
+  // A completed payment should never be cancelled based
+  // on a browser callback's status query parameter.
+  if (verification.payment.status === "SUCCESS") {
+    return res.redirect(303, `${frontendUrl}/payment/success?provider=bkash`);
   }
 
-  if (status === "failure") {
-    return res.status(httpStatus.OK).json({
-      success: false,
-      statusCode: httpStatus.OK,
-      message: "bKash payment failed",
-    });
+  // The provider reports the transaction as completed.
+  // Do not execute it again or mark it cancelled.
+  // It must be reconciled using the verified provider data.
+  if (verification.transactionStatus === "Completed") {
+    throw new AppError(
+      httpStatus.CONFLICT,
+      "bKash transaction is completed and requires reconciliation",
+    );
   }
 
-  const result = await PaymentService.executePayment(paymentID as string);
+  // The customer returned from checkout without success.
+  // Do not assume the payment is definitively cancelled.
+  if (status === "cancel" || status === "failure") {
+    return res.redirect(303, `${frontendUrl}/payment/cancel?provider=bkash`);
+  }
 
-  sendResponse(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: "bKash payment completed successfully",
-    data: result,
-  });
+  if (status !== "success") {
+    throw new AppError(httpStatus.BAD_REQUEST, "Invalid bKash callback status");
+  }
+
+  // Only attempt execution for a payment that is still
+  // locally pending and not reported as completed.
+  if (verification.payment.status !== "PENDING") {
+    throw new AppError(
+      httpStatus.CONFLICT,
+      "This payment is no longer pending",
+    );
+  }
+
+  const payment = await PaymentService.executePayment(paymentID);
+
+  if (payment.status !== "SUCCESS") {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "bKash payment could not be confirmed",
+    );
+  }
+
+  return res.redirect(303, `${frontendUrl}/payment/success?provider=bkash`);
 });
 
 const createStripePayment = catchAsync(async (req: Request, res: Response) => {

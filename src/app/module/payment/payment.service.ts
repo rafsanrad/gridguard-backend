@@ -38,14 +38,16 @@ const createPayment = async (
 ) => {
   // 1. Find the service request
   const serviceRequest = await prisma.serviceRequest.findUnique({
-    where: { id: payload.serviceRequestId },
+    where: {
+      id: payload.serviceRequestId,
+    },
   });
 
   if (!serviceRequest) {
     throw new AppError(404, "Service request not found");
   }
 
-  // 2. Verify ownership
+  // 2. Verify service request ownership
   if (serviceRequest.customerId !== customerId) {
     throw new AppError(
       403,
@@ -67,12 +69,51 @@ const createPayment = async (
   );
 
   if (existingPayment) {
-    // Resume an existing bKash checkout
-    if (
-      existingPayment.provider === "BKASH" &&
-      existingPayment.checkoutUrl &&
-      existingPayment.providerPaymentId
-    ) {
+    // Do not switch providers while Stripe payment is pending
+    if (existingPayment.provider !== "BKASH") {
+      throw new AppError(
+        409,
+        "A pending Stripe payment already exists. Resolve it before using bKash.",
+      );
+    }
+
+    // Verify that the existing payment has a provider ID
+    if (!existingPayment.providerPaymentId) {
+      throw new AppError(
+        409,
+        "Existing bKash payment is missing its payment ID",
+      );
+    }
+
+    // 5. Reconcile the existing payment with bKash
+    const reconciliation = await reconcileBkashPayment(
+      existingPayment.providerPaymentId,
+    );
+
+    // Already paid
+    if (reconciliation.status === "SUCCESS") {
+      throw new AppError(409, "This service request has already been paid");
+    }
+
+    // Provider reports a completed transaction
+    if (reconciliation.status === "REQUIRES_RECONCILIATION") {
+      throw new AppError(409, "Previous bKash payment requires reconciliation");
+    }
+
+    // Provider status could not be determined
+    if (reconciliation.status === "UNKNOWN") {
+      throw new AppError(
+        409,
+        "Unable to confirm the previous bKash payment status",
+      );
+    }
+
+    // Existing payment is still pending
+    if (reconciliation.status === "PENDING") {
+      if (!existingPayment.checkoutUrl) {
+        throw new AppError(409, "Existing bKash checkout URL is unavailable");
+      }
+
       return {
         payment: existingPayment,
         paymentID: existingPayment.providerPaymentId,
@@ -80,19 +121,17 @@ const createPayment = async (
       };
     }
 
-    throw new AppError(
-      409,
-      "An existing payment attempt must be resolved before starting another checkout",
-    );
+    // Never create another checkout for an unresolved payment
+    throw new AppError(409, "Existing bKash payment could not be resolved");
   }
 
-  // 5. Generate a unique merchant invoice
+  // 6. Generate unique merchant invoice number
   const merchantInvoiceNumber = `GRIDGUARD-${randomUUID()}`;
 
-  // 6. Get bKash authentication token
+  // 7. Get bKash authentication token
   const bkashIdToken = await getBkashIdToken();
 
-  // 7. Create bKash checkout
+  // 8. Create a new bKash checkout
   const response = await fetch(
     `${config.bkash_base_url}/tokenized/checkout/create`,
     {
@@ -115,9 +154,10 @@ const createPayment = async (
     },
   );
 
+  // 9. Parse bKash response
   const bkashResponse = await response.json();
 
-  // 8. Validate provider response
+  // 10. Validate bKash response
   if (!response.ok || !bkashResponse.paymentID || !bkashResponse.bkashURL) {
     throw new AppError(
       502,
@@ -125,7 +165,7 @@ const createPayment = async (
     );
   }
 
-  // 9. Save pending payment
+  // 11. Save payment in PostgreSQL
   const payment = await prisma.payment.create({
     data: {
       merchantInvoiceNumber,
@@ -140,10 +180,10 @@ const createPayment = async (
     },
   });
 
-  // 10. Invalidate related caches
+  // 12. Invalidate related caches
   await invalidatePaymentCaches();
 
-  // 11. Return checkout information
+  // 13. Return checkout information
   return {
     payment,
     paymentID: bkashResponse.paymentID,
@@ -186,32 +226,41 @@ const createStripePayment = async (
   );
 
   if (existingPayment) {
-    // Resume an existing Stripe checkout
-    if (
-      existingPayment.provider === "STRIPE" &&
-      existingPayment.providerPaymentId
-    ) {
-      const session = await stripe.checkout.sessions.retrieve(
-        existingPayment.providerPaymentId,
+    // Do not switch providers while a bKash payment is pending
+    if (existingPayment.provider !== "STRIPE") {
+      throw new AppError(
+        409,
+        "A pending bKash payment already exists. Resolve it before using Stripe.",
       );
-
-      if (
-        session.status === "open" &&
-        session.payment_status === "unpaid" &&
-        session.url
-      ) {
-        return {
-          payment: existingPayment,
-          sessionId: session.id,
-          checkoutUrl: session.url,
-        };
-      }
     }
 
-    throw new AppError(
-      409,
-      "An existing payment attempt must be resolved before starting another checkout",
-    );
+    // Check the existing Stripe session with Stripe
+    const result = await resolveExistingStripePayment(existingPayment.id);
+
+    // Resume an active Stripe checkout
+    if (result.status === "PENDING") {
+      if (!result.checkoutUrl || !existingPayment.providerPaymentId) {
+        throw new AppError(
+          409,
+          "Existing Stripe checkout is temporarily unavailable",
+        );
+      }
+
+      return {
+        payment: existingPayment,
+        sessionId: existingPayment.providerPaymentId,
+        checkoutUrl: result.checkoutUrl,
+      };
+    }
+
+    // Prevent another payment if the previous one succeeded
+    if (result.status === "SUCCESS") {
+      throw new AppError(409, "This service request has already been paid");
+    }
+
+    // If the previous Stripe session expired,
+    // resolveExistingStripePayment() marks it CANCELLED.
+    // Continue to create a new Stripe checkout.
   }
 
   // 5. Generate a unique merchant invoice
@@ -224,7 +273,7 @@ const createStripePayment = async (
     throw new AppError(400, "Invalid payment amount");
   }
 
-  // 7. Create pending payment record
+  // 7. Create a pending payment record
   const payment = await prisma.payment.create({
     data: {
       merchantInvoiceNumber,
@@ -283,7 +332,7 @@ const createStripePayment = async (
       },
     });
 
-    // 10. Invalidate related caches
+    // 10. Invalidate payment-related caches
     await invalidatePaymentCaches();
 
     // 11. Return checkout information
@@ -293,21 +342,37 @@ const createStripePayment = async (
       checkoutUrl: session.url,
     };
   } catch (error) {
-    // 12. Mark failed checkout initialization
-    await prisma.payment.update({
+    // Mark initialization failure.
+    // Do not automatically mark the payment FAILED if
+    // a Stripe session may already have been created.
+    const currentPayment = await prisma.payment.findUnique({
       where: { id: payment.id },
-      data: {
-        status: "FAILED",
-        failureReason:
-          error instanceof Error
-            ? error.message
-            : "Stripe Checkout session creation failed",
-      },
     });
+
+    if (
+      currentPayment?.status === "PENDING" &&
+      !currentPayment.providerPaymentId
+    ) {
+      // The provider outcome may be uncertain.
+      // Leave PENDING for reconciliation rather than
+      // risking a second charge.
+      await prisma.payment.update({
+        where: { id: payment.id },
+        data: {
+          failureReason:
+            error instanceof Error
+              ? error.message
+              : "Stripe checkout initialization needs reconciliation",
+        },
+      });
+    }
 
     await invalidatePaymentCaches();
 
-    throw new AppError(502, "Failed to create Stripe Checkout session");
+    throw new AppError(
+      502,
+      "Stripe checkout could not be prepared. Please retry later.",
+    );
   }
 };
 
@@ -802,13 +867,203 @@ const reconcileStripePayment = async (paymentId: string) => {
   return handleStripeWebhook("checkout.session.completed", session);
 };
 
+const resolveExistingStripePayment = async (paymentId: string) => {
+  const payment = await prisma.payment.findUnique({
+    where: { id: paymentId },
+  });
+
+  if (!payment || payment.provider !== "STRIPE") {
+    throw new AppError(404, "Stripe payment not found");
+  }
+
+  if (!payment.providerPaymentId) {
+    throw new AppError(409, "Stripe checkout initialization is incomplete");
+  }
+
+  const session = await stripe.checkout.sessions.retrieve(
+    payment.providerPaymentId,
+  );
+
+  if (session.payment_status === "paid") {
+    await reconcileStripePayment(payment.id);
+
+    return {
+      status: "SUCCESS" as const,
+      checkoutUrl: null,
+    };
+  }
+
+  if (session.status === "open") {
+    return {
+      status: "PENDING" as const,
+      checkoutUrl: session.url,
+    };
+  }
+
+  if (session.status === "expired") {
+    await prisma.payment.updateMany({
+      where: {
+        id: payment.id,
+        status: "PENDING",
+      },
+      data: {
+        status: "CANCELLED",
+        failureReason: "Stripe Checkout session expired",
+      },
+    });
+
+    await invalidatePaymentCaches();
+
+    return {
+      status: "CANCELLED" as const,
+      checkoutUrl: null,
+    };
+  }
+
+  // A completed but unpaid session may still be awaiting
+  // asynchronous payment confirmation.
+  throw new AppError(409, "Stripe payment is awaiting confirmation");
+};
+
+const cancelBkashPayment = async (paymentID: string) => {
+  const payment = await prisma.payment.findFirst({
+    where: {
+      providerPaymentId: paymentID,
+      provider: "BKASH",
+    },
+  });
+
+  if (!payment) {
+    throw new AppError(404, "bKash payment not found");
+  }
+
+  if (payment.status === "SUCCESS") {
+    throw new AppError(409, "A successful payment cannot be cancelled");
+  }
+
+  if (payment.status !== "PENDING") {
+    return payment;
+  }
+
+  const updatedPayment = await prisma.payment.update({
+    where: {
+      id: payment.id,
+    },
+    data: {
+      status: "CANCELLED",
+      failureReason: "bKash checkout cancelled",
+    },
+  });
+
+  await invalidatePaymentCaches();
+
+  return updatedPayment;
+};
+
+const verifyBkashPaymentStatus = async (paymentID: string) => {
+  const payment = await prisma.payment.findFirst({
+    where: {
+      providerPaymentId: paymentID,
+      provider: "BKASH",
+    },
+  });
+
+  if (!payment) {
+    throw new AppError(404, "bKash payment not found");
+  }
+
+  const idToken = await getBkashIdToken();
+
+  const response = await fetch(
+    `${config.bkash_base_url}/tokenized/checkout/payment/status`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: idToken,
+        "X-APP-Key": config.bkash_app_key,
+      },
+      body: JSON.stringify({ paymentID }),
+    },
+  );
+
+  if (!response.ok) {
+    throw new AppError(502, "Unable to query bKash payment status");
+  }
+
+  const result = await response.json();
+
+  if (result.statusCode && result.statusCode !== "0000") {
+    throw new AppError(
+      502,
+      result.statusMessage || "bKash payment query failed",
+    );
+  }
+
+  if (result.paymentID !== paymentID) {
+    throw new AppError(502, "bKash returned a mismatched payment ID");
+  }
+
+  return {
+    payment,
+    transactionStatus: result.transactionStatus,
+    providerResponse: result,
+  };
+};
+
+const reconcileBkashPayment = async (paymentID: string) => {
+  // 1. Verify the payment against bKash
+  const verification = await verifyBkashPaymentStatus(paymentID);
+
+  const { payment, transactionStatus } = verification;
+
+  // 2. Already successful in our database
+  if (payment.status === "SUCCESS") {
+    return {
+      payment,
+      status: "SUCCESS" as const,
+    };
+  }
+
+  // 3. Provider reports a completed transaction
+  if (transactionStatus === "Completed") {
+    // Do not execute or charge again.
+    // The completed transaction needs separate reconciliation
+    // using verified provider details.
+    return {
+      payment,
+      status: "REQUIRES_RECONCILIATION" as const,
+    };
+  }
+
+  // 4. Transaction is still pending
+  if (transactionStatus === "Initiated") {
+    return {
+      payment,
+      status: "PENDING" as const,
+    };
+  }
+
+  // 5. Unknown or unsupported status
+  // Never assume this means the payment failed.
+  return {
+    payment,
+    status: "UNKNOWN" as const,
+  };
+};
+
 export const PaymentService = {
   createPayment,
   createStripePayment,
   handleStripeWebhook,
   reconcileStripePayment,
+  resolveExistingStripePayment,
   executePayment,
   getAllPayments,
   getMyPayments,
   getSinglePayment,
+  cancelBkashPayment,
+  verifyBkashPaymentStatus,
+  reconcileBkashPayment,
 };
