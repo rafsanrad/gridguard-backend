@@ -19,14 +19,14 @@ router.post(
 
 router.get(
   "/",
-  auth(Role.ADMIN, Role.OPERATOR),
+  auth(Role.ADMIN, Role.OPERATOR,Role.CUSTOMER),
   validateQuery,
   AreaController.getAllAreas,
 );
 
 router.get(
   "/:id",
-  auth(Role.ADMIN, Role.OPERATOR),
+  auth(Role.ADMIN, Role.OPERATOR,Role.CUSTOMER),
   AreaController.getSingleArea,
 );
 
