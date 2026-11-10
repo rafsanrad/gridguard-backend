@@ -31,6 +31,21 @@ const getAllNotifications = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getMyNotifications = catchAsync(async (req: Request, res: Response) => {
+  const result = await NotificationService.getMyNotifications(
+    req.user!.userId,
+    req.validatedQuery,
+  );
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Your notifications fetched successfully",
+    data: result.data,
+    meta: result.meta,
+  });
+});
+
 const getSingleNotification = catchAsync(
   async (req: Request, res: Response) => {
     const result = await NotificationService.getSingleNotification(
@@ -68,6 +83,7 @@ const markNotificationAsRead = catchAsync(
 export const NotificationController = {
   createNotification,
   getAllNotifications,
+  getMyNotifications,
   getSingleNotification,
   markNotificationAsRead,
 };

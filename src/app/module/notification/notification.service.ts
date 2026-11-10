@@ -119,6 +119,69 @@ const getAllNotifications = async (
   return result;
 };
 
+const getMyNotifications = async (userId: string, query?: IQueryParams) => {
+  const page = Math.max(1, query?.page ?? 1);
+  const limit = Math.max(1, Math.min(query?.limit ?? 10, 100));
+  const skip = (page - 1) * limit;
+
+  const search = query?.search ?? "";
+  const sortBy = query?.sortBy ?? "";
+  const sortOrder = query?.sortOrder ?? "desc";
+
+  const safeSortBy = getSafeSortField(
+    sortBy,
+    ["title", "type", "isRead", "createdAt", "updatedAt"],
+    "createdAt",
+  );
+
+  const where = {
+    userId,
+    user: {
+      deletedAt: null,
+    },
+    ...(search
+      ? {
+          OR: [
+            {
+              title: {
+                contains: search,
+                mode: "insensitive" as const,
+              },
+            },
+            {
+              message: {
+                contains: search,
+                mode: "insensitive" as const,
+              },
+            },
+          ],
+        }
+      : {}),
+  };
+
+  const [notifications, total] = await prisma.$transaction([
+    prisma.notification.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: {
+        [safeSortBy]: sortOrder,
+      },
+    }),
+    prisma.notification.count({ where }),
+  ]);
+
+  return {
+    data: notifications,
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
+};
+
 const getSingleNotification = async (
   id: string,
   userId?: string,
@@ -185,6 +248,7 @@ const markNotificationAsRead = async (
 export const NotificationService = {
   createNotification,
   getAllNotifications,
+  getMyNotifications,
   getSingleNotification,
   markNotificationAsRead,
 };

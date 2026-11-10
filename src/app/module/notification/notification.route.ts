@@ -23,6 +23,13 @@ router.get(
 );
 
 router.get(
+  "/my",
+  auth(Role.CUSTOMER),
+  validateQuery,
+  NotificationController.getMyNotifications,
+);
+
+router.get(
   "/:id",
   auth(Role.ADMIN, Role.OPERATOR, Role.CUSTOMER),
   NotificationController.getSingleNotification,
