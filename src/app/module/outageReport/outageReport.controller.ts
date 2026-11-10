@@ -33,6 +33,21 @@ const getAllOutageReports = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getMyOutageReports = catchAsync(async (req: Request, res: Response) => {
+  const result = await OutageReportService.getMyOutageReports(
+    req.user!.userId,
+    req.validatedQuery,
+  );
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Your outage reports fetched successfully",
+    data: result.data,
+    meta: result.meta,
+  });
+});
+
 const getSingleOutageReport = catchAsync(
   async (req: Request, res: Response) => {
     const result = await OutageReportService.getSingleOutageReport(
@@ -53,5 +68,6 @@ const getSingleOutageReport = catchAsync(
 export const OutageReportController = {
   createOutageReport,
   getAllOutageReports,
+  getMyOutageReports,
   getSingleOutageReport,
 };

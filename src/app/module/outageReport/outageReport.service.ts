@@ -155,6 +155,69 @@ const getAllOutageReports = async (query?: IQueryParams) => {
   return result;
 };
 
+const getMyOutageReports = async (customerId: string, query?: IQueryParams) => {
+  const page = query?.page ?? 1;
+  const limit = query?.limit ?? 10;
+  const skip = (page - 1) * limit;
+
+  const search = query?.search ?? "";
+  const sortBy = query?.sortBy ?? "";
+  const sortOrder = query?.sortOrder ?? "desc";
+
+  const safeSortBy = getSafeSortField(
+    sortBy,
+    ["reportedAt", "createdAt", "updatedAt"],
+    "createdAt",
+  );
+
+  const where = {
+    customerId,
+    ...(search
+      ? {
+          OR: [
+            {
+              description: {
+                contains: search,
+                mode: "insensitive" as const,
+              },
+            },
+            {
+              location: {
+                contains: search,
+                mode: "insensitive" as const,
+              },
+            },
+          ],
+        }
+      : {}),
+  };
+
+  const [reports, total] = await prisma.$transaction([
+    prisma.outageReport.findMany({
+      where,
+      skip,
+      take: limit,
+      include: {
+        outage: true,
+      },
+      orderBy: {
+        [safeSortBy]: sortOrder,
+      },
+    }),
+    prisma.outageReport.count({ where }),
+  ]);
+
+  return {
+    data: reports,
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
+};
+
 const getSingleOutageReport = async (
   id: string,
   userId?: string,
@@ -189,5 +252,6 @@ const getSingleOutageReport = async (
 export const OutageReportService = {
   createOutageReport,
   getAllOutageReports,
+  getMyOutageReports,
   getSingleOutageReport,
 };
