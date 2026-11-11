@@ -367,10 +367,94 @@ const deleteUser = async (id: string, actorId: string) => {
   return deletedUser;
 };
 
+const getNotificationRecipients = async (query?: IQueryParams) => {
+  const page = Math.max(1, query?.page ?? 1);
+  const limit = Math.max(1, Math.min(query?.limit ?? 10, 100));
+  const skip = (page - 1) * limit;
+
+  const search = query?.search?.trim() ?? "";
+  const sortBy = query?.sortBy ?? "";
+  const sortOrder = query?.sortOrder ?? "asc";
+
+  const safeSortBy = getSafeSortField(
+    sortBy,
+    ["name", "email", "createdAt"],
+    "name",
+  );
+
+  const cacheKey = `users:notificationRecipients:${page}:${limit}:${search}:${safeSortBy}:${sortOrder}`;
+
+  const cachedData = await getCache(cacheKey);
+
+  if (cachedData) {
+    return cachedData;
+  }
+
+  const where = {
+    role: "CUSTOMER" as const,
+    status: "ACTIVE" as const,
+    deletedAt: null,
+
+    ...(search
+      ? {
+          OR: [
+            {
+              name: {
+                contains: search,
+                mode: "insensitive" as const,
+              },
+            },
+            {
+              email: {
+                contains: search,
+                mode: "insensitive" as const,
+              },
+            },
+          ],
+        }
+      : {}),
+  };
+
+  const [recipients, total] = await prisma.$transaction([
+    prisma.user.findMany({
+      where,
+      skip,
+      take: limit,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+      },
+      orderBy: {
+        [safeSortBy]: sortOrder,
+      },
+    }),
+
+    prisma.user.count({
+      where,
+    }),
+  ]);
+
+  const result = {
+    data: recipients,
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
+
+  await setCache(cacheKey, result, 300);
+
+  return result;
+};
+
 export const UserService = {
   getAllUsers,
   getSingleUser,
   updateUserStatus,
   updateUser,
   deleteUser,
+  getNotificationRecipients
 };

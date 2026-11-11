@@ -72,10 +72,27 @@ const deleteUser = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getNotificationRecipients = catchAsync(
+  async (req: Request, res: Response) => {
+    const result = await UserService.getNotificationRecipients(
+      req.validatedQuery,
+    );
+
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.OK,
+      message: "Notification recipients retrieved successfully",
+      data: result.data,
+      meta: result.meta,
+    });
+  },
+);
+
 export const UserController = {
   getAllUsers,
   getSingleUser,
   updateUserStatus,
   updateUser,
   deleteUser,
+  getNotificationRecipients
 };

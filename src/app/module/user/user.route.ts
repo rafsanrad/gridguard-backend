@@ -9,8 +9,19 @@ import { Role } from "../../../generated/prisma/enums";
 
 const router = Router();
 
+// Admin only
 router.get("/", auth(Role.ADMIN), validateQuery, UserController.getAllUsers);
 
+// Admin and Operator - Notification recipients
+// IMPORTANT: Keep this before /:id
+router.get(
+  "/recipients",
+  auth(Role.ADMIN, Role.OPERATOR),
+  validateQuery,
+  UserController.getNotificationRecipients,
+);
+
+// Dynamic routes
 router.get("/:id", auth(Role.ADMIN), UserController.getSingleUser);
 
 router.patch(

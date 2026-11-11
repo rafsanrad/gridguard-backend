@@ -9,12 +9,14 @@ const createNotification = async (payload: ICreateNotificationPayload) => {
   const user = await prisma.user.findFirst({
     where: {
       id: payload.userId,
+      role: "CUSTOMER",
+      status: "ACTIVE",
       deletedAt: null,
     },
   });
 
   if (!user) {
-    throw new AppError(404, "User not found");
+    throw new AppError(404, "Active customer not found");
   }
 
   const notification = await prisma.notification.create({
