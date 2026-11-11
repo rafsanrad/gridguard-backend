@@ -7,21 +7,15 @@ export const setCache = async (
   ttl = 300,
 ) => {
   try {
-    await redisClient.set(
-      key,
-      JSON.stringify(data),
-      {
-        EX: ttl,
-      },
-    );
+    await redisClient.set(key, JSON.stringify(data), {
+      EX: ttl,
+    });
   } catch (error) {
     console.error("Redis SET error:", error);
   }
 };
 
-export const getCache = async (
-  key: string,
-) => {
+export const getCache = async (key: string) => {
   try {
     const data = await redisClient.get(key);
 
@@ -36,9 +30,7 @@ export const getCache = async (
   }
 };
 
-export const deleteCache = async (
-  key: string,
-) => {
+export const deleteCache = async (key: string) => {
   try {
     await redisClient.del(key);
   } catch (error) {
@@ -50,12 +42,22 @@ export const deleteCacheByPrefix = async (
   prefix: string,
 ) => {
   try {
-    for await (const key of redisClient.scanIterator({
+    let deletedCount = 0;
+
+    for await (const keys of redisClient.scanIterator({
       MATCH: `${prefix}:*`,
       COUNT: 100,
     })) {
-      await redisClient.del(key);
+      if (keys.length === 0) {
+        continue;
+      }
+
+      deletedCount += await redisClient.del(keys);
     }
+
+    console.log(
+      `Redis cache invalidated: ${prefix} (${deletedCount} keys deleted)`,
+    );
   } catch (error) {
     console.error(
       "Redis cache invalidation error:",

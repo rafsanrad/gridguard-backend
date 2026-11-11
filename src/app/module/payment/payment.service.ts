@@ -36,6 +36,7 @@ const createPayment = async (
   payload: ICreatePaymentPayload,
   customerId: string,
 ) => {
+  console.log("🔥 BKASH CREATE PAYMENT FUNCTION CALLED");
   // 1. Find the service request
   const serviceRequest = await prisma.serviceRequest.findUnique({
     where: {
@@ -157,6 +158,22 @@ const createPayment = async (
   // 9. Parse bKash response
   const bkashResponse = await response.json();
 
+  console.log("bKash create response:", {
+    httpStatus: response.status,
+    statusCode: bkashResponse.statusCode,
+    statusMessage: bkashResponse.statusMessage,
+    hasPaymentID: Boolean(bkashResponse.paymentID),
+    hasCheckoutUrl: Boolean(bkashResponse.bkashURL),
+  });
+
+  console.log("bKash checkout details:", {
+    statusCode: bkashResponse.statusCode,
+    paymentIDExists: Boolean(bkashResponse.paymentID),
+    checkoutHost: bkashResponse.bkashURL
+      ? new URL(bkashResponse.bkashURL).hostname
+      : null,
+  });
+
   // 10. Validate bKash response
   if (!response.ok || !bkashResponse.paymentID || !bkashResponse.bkashURL) {
     throw new AppError(
@@ -226,7 +243,6 @@ const createStripePayment = async (
   );
 
   if (existingPayment) {
-    // Do not switch providers while a bKash payment is pending
     if (existingPayment.provider !== "STRIPE") {
       throw new AppError(
         409,
@@ -234,36 +250,45 @@ const createStripePayment = async (
       );
     }
 
-    // Check the existing Stripe session with Stripe
+    // Recover or inspect the existing Stripe checkout
     const result = await resolveExistingStripePayment(existingPayment.id);
 
-    // Resume an active Stripe checkout
+    // Resume an existing or recovered checkout
     if (result.status === "PENDING") {
-      if (!result.checkoutUrl || !existingPayment.providerPaymentId) {
+      if (!result.checkoutUrl || !result.sessionId) {
         throw new AppError(
           409,
           "Existing Stripe checkout is temporarily unavailable",
         );
       }
 
+      const updatedPayment = await prisma.payment.findUniqueOrThrow({
+        where: { id: existingPayment.id },
+      });
+
       return {
-        payment: existingPayment,
-        sessionId: existingPayment.providerPaymentId,
+        payment: updatedPayment,
+        sessionId: result.sessionId,
         checkoutUrl: result.checkoutUrl,
       };
     }
 
-    // Prevent another payment if the previous one succeeded
+    // Prevent duplicate payment
     if (result.status === "SUCCESS") {
       throw new AppError(409, "This service request has already been paid");
     }
 
-    // If the previous Stripe session expired,
-    // resolveExistingStripePayment() marks it CANCELLED.
-    // Continue to create a new Stripe checkout.
+    // If the previous session expired, the resolver marks it
+    // CANCELLED and we can create a new checkout below.
+    if (result.status !== "CANCELLED") {
+      throw new AppError(
+        409,
+        "Existing Stripe payment requires reconciliation",
+      );
+    }
   }
 
-  // 5. Generate a unique merchant invoice
+  // 5. Generate a unique invoice number
   const merchantInvoiceNumber = `GRIDGUARD-STRIPE-${randomUUID()}`;
 
   // 6. Convert BDT to the smallest currency unit
@@ -273,7 +298,7 @@ const createStripePayment = async (
     throw new AppError(400, "Invalid payment amount");
   }
 
-  // 7. Create a pending payment record
+  // 7. Create pending payment record
   const payment = await prisma.payment.create({
     data: {
       merchantInvoiceNumber,
@@ -288,47 +313,54 @@ const createStripePayment = async (
 
   try {
     // 8. Create Stripe Checkout Session
-    const session = await stripe.checkout.sessions.create({
-      mode: "payment",
+    const session = await stripe.checkout.sessions.create(
+      {
+        mode: "payment",
 
-      line_items: [
-        {
-          price_data: {
-            currency: "bdt",
-            product_data: {
-              name: serviceRequest.title,
-              description: "GridGuard Service Request Payment",
+        line_items: [
+          {
+            price_data: {
+              currency: "bdt",
+              product_data: {
+                name: serviceRequest.title,
+                description: "GridGuard Service Request Payment",
+              },
+              unit_amount: amount,
             },
-            unit_amount: amount,
+            quantity: 1,
           },
-          quantity: 1,
+        ],
+
+        metadata: {
+          paymentId: payment.id,
+          merchantInvoiceNumber,
+          serviceRequestId: payload.serviceRequestId,
+          customerId,
         },
-      ],
 
-      metadata: {
-        paymentId: payment.id,
-        merchantInvoiceNumber,
-        serviceRequestId: payload.serviceRequestId,
-        customerId,
+        success_url:
+          `${config.frontend_url}/payment/success` +
+          "?session_id={CHECKOUT_SESSION_ID}",
+
+        cancel_url: `${config.frontend_url}/payment/cancel`,
       },
-
-      success_url:
-        `${config.frontend_url}/payment/success` +
-        "?session_id={CHECKOUT_SESSION_ID}",
-
-      cancel_url: `${config.frontend_url}/payment/cancel`,
-    });
+      {
+        // Same key is used when recovering this payment.
+        idempotencyKey: `gridguard-stripe-checkout-${payment.id}`,
+      },
+    );
 
     if (!session.url) {
       throw new Error("Stripe Checkout URL was not generated");
     }
 
-    // 9. Save Stripe session information
+    // 9. Save Stripe Checkout Session information
     const updatedPayment = await prisma.payment.update({
       where: { id: payment.id },
       data: {
         providerPaymentId: session.id,
         checkoutUrl: session.url,
+        failureReason: null,
       },
     });
 
@@ -342,9 +374,10 @@ const createStripePayment = async (
       checkoutUrl: session.url,
     };
   } catch (error) {
-    // Mark initialization failure.
-    // Do not automatically mark the payment FAILED if
-    // a Stripe session may already have been created.
+    console.error("Stripe checkout initialization error:", error);
+
+    // Do not mark the payment FAILED automatically.
+    // Stripe might have created a session even if saving it failed.
     const currentPayment = await prisma.payment.findUnique({
       where: { id: payment.id },
     });
@@ -353,9 +386,6 @@ const createStripePayment = async (
       currentPayment?.status === "PENDING" &&
       !currentPayment.providerPaymentId
     ) {
-      // The provider outcome may be uncertain.
-      // Leave PENDING for reconciliation rather than
-      // risking a second charge.
       await prisma.payment.update({
         where: { id: payment.id },
         data: {
@@ -870,14 +900,87 @@ const reconcileStripePayment = async (paymentId: string) => {
 const resolveExistingStripePayment = async (paymentId: string) => {
   const payment = await prisma.payment.findUnique({
     where: { id: paymentId },
+    include: {
+      serviceRequest: true,
+    },
   });
 
   if (!payment || payment.provider !== "STRIPE") {
     throw new AppError(404, "Stripe payment not found");
   }
 
+  if (payment.status !== "PENDING") {
+    return {
+      status: payment.status,
+      checkoutUrl: null,
+      sessionId: payment.providerPaymentId,
+    };
+  }
+
+  // Recover a checkout that was never fully initialized.
   if (!payment.providerPaymentId) {
-    throw new AppError(409, "Stripe checkout initialization is incomplete");
+    const amount = Math.round(Number(payment.amount) * 100);
+
+    if (!Number.isSafeInteger(amount) || amount <= 0) {
+      throw new AppError(400, "Invalid payment amount");
+    }
+
+    const session = await stripe.checkout.sessions.create(
+      {
+        mode: "payment",
+        line_items: [
+          {
+            price_data: {
+              currency: "bdt",
+              product_data: {
+                name: payment.serviceRequest.title,
+                description: "GridGuard Service Request Payment",
+              },
+              unit_amount: amount,
+            },
+            quantity: 1,
+          },
+        ],
+        metadata: {
+          paymentId: payment.id,
+          merchantInvoiceNumber: payment.merchantInvoiceNumber,
+          serviceRequestId: payment.serviceRequestId,
+          customerId: payment.customerId,
+        },
+        success_url:
+          `${config.frontend_url}/payment/success` +
+          "?session_id={CHECKOUT_SESSION_ID}",
+        cancel_url: `${config.frontend_url}/payment/cancel`,
+      },
+      {
+        idempotencyKey: `gridguard-stripe-checkout-${payment.id}`,
+      },
+    );
+
+    if (!session.url) {
+      throw new AppError(502, "Stripe Checkout URL was not generated");
+    }
+
+    await prisma.payment.updateMany({
+      where: {
+        id: payment.id,
+        status: "PENDING",
+        providerPaymentId: null,
+      },
+      data: {
+        providerPaymentId: session.id,
+        checkoutUrl: session.url,
+        failureReason: null,
+      },
+    });
+
+    await invalidatePaymentCaches();
+
+    return {
+      status: "PENDING" as const,
+      checkoutUrl: session.url,
+      sessionId: session.id,
+    };
   }
 
   const session = await stripe.checkout.sessions.retrieve(
@@ -890,6 +993,7 @@ const resolveExistingStripePayment = async (paymentId: string) => {
     return {
       status: "SUCCESS" as const,
       checkoutUrl: null,
+      sessionId: session.id,
     };
   }
 
@@ -897,6 +1001,7 @@ const resolveExistingStripePayment = async (paymentId: string) => {
     return {
       status: "PENDING" as const,
       checkoutUrl: session.url,
+      sessionId: session.id,
     };
   }
 
@@ -917,11 +1022,10 @@ const resolveExistingStripePayment = async (paymentId: string) => {
     return {
       status: "CANCELLED" as const,
       checkoutUrl: null,
+      sessionId: session.id,
     };
   }
 
-  // A completed but unpaid session may still be awaiting
-  // asynchronous payment confirmation.
   throw new AppError(409, "Stripe payment is awaiting confirmation");
 };
 
