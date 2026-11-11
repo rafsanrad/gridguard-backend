@@ -224,8 +224,8 @@ const markNotificationAsRead = async (
     throw new AppError(404, "Notification not found");
   }
 
-  if (userRole === "CUSTOMER" && notification.userId !== userId) {
-    throw new AppError(403, "You can only update your own notification");
+  if (!userId || notification.userId !== userId) {
+    throw new AppError(403, "You can only mark your own notifications as read");
   }
 
   if (notification.isRead) {
