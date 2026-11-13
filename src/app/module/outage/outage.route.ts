@@ -1,15 +1,17 @@
+
 import { Router } from "express";
 
 import { Role } from "../../../generated/prisma/enums";
 import { auth } from "../../middleware/checkAuth";
 import { validateRequest } from "../../middleware/validateRequest";
+import { validateQuery } from "../../middleware/validateQuery";
 
 import { OutageController } from "./outage.controller";
 import { OutageValidation } from "./outage.validation";
-import { validateQuery } from "../../middleware/validateQuery";
 
 const router = Router();
 
+// Create outage - authenticated users only
 router.post(
   "/",
   auth(Role.ADMIN, Role.OPERATOR, Role.CUSTOMER),
@@ -17,19 +19,20 @@ router.post(
   OutageController.createOutage,
 );
 
+// Get all outages - PUBLIC
 router.get(
   "/",
-  auth(Role.ADMIN, Role.OPERATOR),
   validateQuery,
   OutageController.getAllOutages,
 );
 
+// Get single outage - PUBLIC
 router.get(
   "/:id",
-  auth(Role.ADMIN, Role.OPERATOR, Role.CUSTOMER),
   OutageController.getSingleOutage,
 );
 
+// Update outage - Admin and Operator
 router.patch(
   "/:id",
   auth(Role.ADMIN, Role.OPERATOR),
@@ -37,6 +40,7 @@ router.patch(
   OutageController.updateOutage,
 );
 
+// Update outage status - Admin and Operator
 router.patch(
   "/:id/status",
   auth(Role.ADMIN, Role.OPERATOR),
@@ -44,6 +48,7 @@ router.patch(
   OutageController.updateOutageStatus,
 );
 
+// Delete outage - Admin and Operator
 router.delete(
   "/:id",
   auth(Role.ADMIN, Role.OPERATOR),

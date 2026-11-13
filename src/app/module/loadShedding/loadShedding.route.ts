@@ -3,13 +3,14 @@ import { Router } from "express";
 import { Role } from "../../../generated/prisma/enums";
 import { auth } from "../../middleware/checkAuth";
 import { validateRequest } from "../../middleware/validateRequest";
+import { validateQuery } from "../../middleware/validateQuery";
 
 import { LoadSheddingController } from "./loadShedding.controller";
 import { LoadSheddingValidation } from "./loadShedding.validation";
-import { validateQuery } from "../../middleware/validateQuery";
 
 const router = Router();
 
+// Create schedule - Admin and Operator
 router.post(
   "/",
   auth(Role.ADMIN, Role.OPERATOR),
@@ -17,19 +18,13 @@ router.post(
   LoadSheddingController.createLoadShedding,
 );
 
-router.get(
-  "/",
-  auth(Role.ADMIN, Role.OPERATOR,Role.CUSTOMER),
-  validateQuery,
-  LoadSheddingController.getAllLoadShedding,
-);
+// Get all schedules - PUBLIC
+router.get("/", validateQuery, LoadSheddingController.getAllLoadShedding);
 
-router.get(
-  "/:id",
-  auth(Role.ADMIN, Role.OPERATOR,Role.CUSTOMER),
-  LoadSheddingController.getSingleLoadShedding,
-);
+// Get single schedule - PUBLIC
+router.get("/:id", LoadSheddingController.getSingleLoadShedding);
 
+// Update schedule - Admin and Operator
 router.patch(
   "/:id",
   auth(Role.ADMIN, Role.OPERATOR),
@@ -37,6 +32,7 @@ router.patch(
   LoadSheddingController.updateLoadShedding,
 );
 
+// Cancel schedule - Admin and Operator
 router.delete(
   "/:id",
   auth(Role.ADMIN, Role.OPERATOR),

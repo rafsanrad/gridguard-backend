@@ -3,13 +3,14 @@ import { Router } from "express";
 import { Role } from "../../../generated/prisma/enums";
 import { auth } from "../../middleware/checkAuth";
 import { validateRequest } from "../../middleware/validateRequest";
+import { validateQuery } from "../../middleware/validateQuery";
 
 import { FeederController } from "./feeder.controller";
 import { FeederValidation } from "./feeder.validation";
-import { validateQuery } from "../../middleware/validateQuery";
 
 const router = Router();
 
+// Create feeder - Admin only
 router.post(
   "/",
   auth(Role.ADMIN),
@@ -17,19 +18,13 @@ router.post(
   FeederController.createFeeder,
 );
 
-router.get(
-  "/",
-  auth(Role.ADMIN, Role.OPERATOR),
-  validateQuery,
-  FeederController.getAllFeeders,
-);
+// Get all feeders - PUBLIC
+router.get("/", validateQuery, FeederController.getAllFeeders);
 
-router.get(
-  "/:id",
-  auth(Role.ADMIN, Role.OPERATOR),
-  FeederController.getSingleFeeder,
-);
+// Get single feeder - PUBLIC
+router.get("/:id", FeederController.getSingleFeeder);
 
+// Update feeder - Admin only
 router.patch(
   "/:id",
   auth(Role.ADMIN),
@@ -37,6 +32,7 @@ router.patch(
   FeederController.updateFeeder,
 );
 
+// Delete feeder - Admin only
 router.delete("/:id", auth(Role.ADMIN), FeederController.deleteFeeder);
 
 export const FeederRoutes = router;
